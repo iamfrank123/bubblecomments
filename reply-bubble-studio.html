@@ -417,7 +417,7 @@ input[type=range]::-moz-range-thumb{
 }
 .bubble__text:hover{box-shadow:0 0 0 1px color-mix(in srgb, currentColor 22%, transparent);}
 .bubble__text:focus{box-shadow:0 0 0 2px color-mix(in srgb, currentColor 55%, transparent);}
-.bubble__text:empty::before{content:"Type your comment…";opacity:.45;}
+.bubble__text:empty::before{content:"Insert text here";opacity:.45;}
 
 /* typography overrides driven by the console — each one, once set,
    applies identically to every bubble instead of scaling per skin */
@@ -1049,7 +1049,7 @@ input[type=range]::-moz-range-thumb{
       </div>
       <div class="field">
         <label for="textIn">Comment text</label>
-        <textarea class="textarea" id="textIn" spellcheck="false">thank you so much i always wondered how video response to comments worked</textarea>
+        <textarea class="textarea" id="textIn" spellcheck="false">Insert text here</textarea>
       </div>
       <button class="generate" id="genBtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="3.4"/></svg>
@@ -2245,6 +2245,8 @@ input[type=range]::-moz-range-thumb{
     blob:'<span class="bubble__tail"><i></i><i></i><i></i></span>'
   };
 
+  const DEFAULT_TEXT = "Insert text here";
+
   const SAMPLES = [
     "thank you so much i always wondered how video response to comments worked",
     "wait i have been doing this wrong for three whole years",
@@ -2561,6 +2563,21 @@ input[type=range]::-moz-range-thumb{
   });
 
   /* ---------- in-place editing ---------- */
+  /* the placeholder text selects itself, so typing replaces it outright */
+  grid.addEventListener("focusin", e => {
+    const el = e.target.closest(".bubble__text");
+    if (!el || el.textContent.trim() !== DEFAULT_TEXT) return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+
+  textIn.addEventListener("focus", () => {
+    if (textIn.value.trim() === DEFAULT_TEXT) textIn.select();
+  });
+
   grid.addEventListener("input", e => {
     const el = e.target.closest(".bubble__text");
     if (!el) return;
@@ -3473,7 +3490,7 @@ input[type=range]::-moz-range-thumb{
     if (!bubble) throw new Error("bubble not found");
     const rawText = (bubble.querySelector(".bubble__text").textContent || "").trim();
     const user = (bubble.querySelector(".bubble__user").textContent || "@user").trim();
-    const text = applyCase(rawText || "Type your comment…", k.caseMode, sp.upper);
+    const text = applyCase(rawText || "Insert text here", k.caseMode, sp.upper);
 
     const family = k.family || sp.text.family;
     const weight = k.weight || sp.text.weight;
