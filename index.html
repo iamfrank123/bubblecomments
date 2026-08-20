@@ -1376,6 +1376,12 @@ input[type=range]::-moz-range-thumb{
       if (bl) { p.push([x + n, y + h], [x, y + h - n]); } else p.push([x, y + h]);
       if (tl) p.push([x, y + n]);
       poly(c, p);
+    } else if (S.k === "step") {
+      /* staircase corner — two right-angle steps out of one corner */
+      const n = S.n || 15;
+      poly(c, [[x, y], [x + w, y], [x + w, y + h - n * 2],
+               [x + w - n, y + h - n * 2], [x + w - n, y + h - n],
+               [x + w - n * 2, y + h - n], [x + w - n * 2, y + h], [x, y + h]]);
     } else if (S.k === "blob") {
       blobPath(c, x, y, w, h, S.H, S.V);
     } else {
@@ -1665,6 +1671,30 @@ input[type=range]::-moz-range-thumb{
         break;
       }
 
+      /* a stroked rectangle — inner frames, and offset outlines when
+         drawn from sp.under, which paints outside the card's clip */
+      case "frame": {
+        const fw = D.w || 1, ins = D.inset || 0;
+        c.strokeStyle = D.c; c.lineWidth = fw;
+        rr(c, (D.dx || 0) + ins + fw / 2, (D.dy || 0) + ins + fw / 2,
+           W - ins * 2 - fw, H - ins * 2 - fw, D.r != null ? D.r : 0);
+        c.stroke();
+        break;
+      }
+
+      case "brackets": {
+        const s = D.size || 16, ins = D.inset || 9;
+        c.strokeStyle = D.c; c.lineWidth = D.w || 2; c.lineCap = "square";
+        const L = ins, R = W - ins, T = ins, B = H - ins;
+        c.beginPath();
+        c.moveTo(L, T + s); c.lineTo(L, T); c.lineTo(L + s, T);
+        c.moveTo(R - s, T); c.lineTo(R, T); c.lineTo(R, T + s);
+        c.moveTo(R, B - s); c.lineTo(R, B); c.lineTo(R - s, B);
+        c.moveTo(L + s, B); c.lineTo(L, B); c.lineTo(L, B - s);
+        c.stroke();
+        break;
+      }
+
       case "dot": {
         c.fillStyle = D.c;
         c.beginPath();
@@ -1757,6 +1787,14 @@ input[type=range]::-moz-range-thumb{
   function paintSpec(c, m, sp) {
     const shape = sp.shape || { k: "rr", r: 20 };
     const base = sp.base || "#0C0A16";
+
+    /* painted before the card and outside its clip, so a frame can sit
+       offset behind it */
+    if (sp.under) {
+      c.save();
+      sp.under.forEach(D => paintDecor(c, m, D));
+      c.restore();
+    }
 
     if (!sp.tail || sp.tail.front !== true) drawTail(c, m, sp.tail);
 
@@ -1877,69 +1915,92 @@ input[type=range]::-moz-range-thumb{
    tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:"#3A2015"},
    mt:{c:"#B8917C"},av:["#FF9C6B","#E2652B","#FFFFFF"],stroke:NOSTROKE},
 
-  {id:"ice",n:"Ice",base:"#E8F6F8",veil:0,shape:{k:"rr",r:20},
-   glow:[["rgba(15,70,85,.12)",18,0,6]],tail:{k:"tri",x:26,w:24,h:14,c:"#E8F6F8"},
-   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:"#0F2E36"},
-   mt:{c:"#77A0A9"},av:["#48C6DE","#1490AC","#FFFFFF"],stroke:NOSTROKE},
+  /* --- 11 to 20: angular and framed. Cut corners, brackets, offset
+         outlines and colour-matched tails instead of soft rectangles --- */
 
-  {id:"bone",n:"Bone Serif",base:"#F7F4EE",veil:0,shape:{k:"rr",r:6},
-   glow:[["rgba(50,42,30,.13)",18,0,6]],rim:{w:1,c:"rgba(60,50,34,.14)"},
-   tail:{k:"tri",x:26,w:22,h:13,c:"#F7F4EE"},
-   tx:{f:'"Newsreader",Georgia,serif',w:500,s:17.5,lh:1.38,ls:-.002,c:"#241F17"},
-   mt:{c:"#9B9283",f:'"DM Mono",ui-monospace,monospace'},av:["#8C7A5E","#5C4E38","#FFFFFF"],stroke:NOSTROKE},
+  {id:"cutcorner",n:"Cut Corner",base:"#FFFFFF",veil:0,
+   shape:{k:"notch",n:20,c:"tl,br"},
+   glow:[["rgba(255,90,60,.16)",16,0,5]],
+   rim:{w:2,c:"#FF5A3C"},
+   tail:{k:"tri",x:28,w:24,h:15,c:"#FF5A3C"},
+   tx:{f:'"Chakra Petch",sans-serif',w:600,s:15.5,lh:1.42,ls:0,c:"#221008"},
+   mt:{c:"#D2553A",f:'"DM Mono",ui-monospace,monospace'},
+   av:["#FF7A54","#E5391C","#FFFFFF"],stroke:NOSTROKE},
 
-  {id:"monocard",n:"Mono Card",base:"#FFFFFF",veil:0,shape:{k:"rr",r:6},
-   glow:[["rgba(22,26,38,.09)",14,0,4]],rim:{w:1,c:"rgba(22,26,38,.18)"},
-   tail:{k:"tri",x:24,w:20,h:12,c:"#FFFFFF"},
-   tx:{f:'"DM Mono",ui-monospace,monospace',w:400,s:14,lh:1.55,ls:0,c:"#1B1F26"},
-   mt:{c:"#8A9099",f:'"DM Mono",ui-monospace,monospace'},av:["#2D3340","#11151C","#FFFFFF"],stroke:NOSTROKE},
+  {id:"doubleframe",n:"Double Frame",base:"#FFFEFB",veil:0,shape:{k:"rr",r:4},
+   glow:[["rgba(30,50,150,.14)",16,0,5]],
+   rim:{w:2,c:"#2B4CE6"},
+   dec:[{d:"frame",inset:7,w:1,r:0,c:"rgba(43,76,230,.38)"}],
+   tail:{k:"tri",x:28,w:22,h:14,c:"#2B4CE6"},
+   tx:{f:'"Newsreader",Georgia,serif',w:500,s:17,lh:1.38,ls:-.002,c:"#141A2E"},
+   mt:{c:"#6478C6",f:'"DM Mono",ui-monospace,monospace'},
+   av:["#5C7BF0","#1E36B4","#FFFFFF"],stroke:NOSTROKE,pad:[22,22,22,22]},
 
-  {id:"coral",n:"Coral Chip",base:"#FFFFFF",veil:0,shape:{k:"rr",r:14},
-   glow:SOFT,rim:HAIR,
-   dec:[{d:"rect",x:0,y:0,wpx:5,h:1,c:"#FF6B57"}],
-   tail:{k:"tri",x:30,w:22,h:13,c:"#FFFFFF"},
-   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:INK},
-   mt:{c:MUTED},av:["#FF8A73","#E5432B","#FFFFFF"],stroke:NOSTROKE,pad:[18,18,18,24]},
+  {id:"bracket",n:"Bracket",base:"#FFFFFF",veil:0,shape:{k:"rr",r:2},
+   glow:[["rgba(18,134,122,.14)",14,0,5]],
+   dec:[{d:"brackets",size:18,inset:7,w:2,c:"#12B886"}],
+   tail:{k:"tri",x:28,w:22,h:14,c:"#12B886"},
+   tx:{f:'"DM Mono",ui-monospace,monospace',w:400,s:14,lh:1.55,ls:0,c:"#0E2620"},
+   mt:{c:"#3E9C86",f:'"DM Mono",ui-monospace,monospace'},
+   av:["#22C79B","#0B8C69","#FFFFFF"],stroke:NOSTROKE,pad:[22,22,22,22]},
 
-  {id:"slateline",n:"Slate Line",base:"#FFFFFF",veil:0,shape:{k:"rr",r:4},
-   glow:[["rgba(22,26,38,.08)",12,0,4]],rim:{w:1.4,c:"#242A33"},
-   tail:{k:"tri",x:26,w:22,h:13,c:"#FFFFFF"},
-   tx:{f:'"Manrope",sans-serif',w:700,s:15.5,lh:1.4,ls:-.012,c:"#12161C"},
-   mt:{c:"#7C838D"},av:["#3A424E","#12161C","#FFFFFF"],stroke:NOSTROKE},
+  {id:"tag",n:"Tag",base:"#FFFDF5",veil:0,
+   shape:{k:"notch",n:22,c:"tl,bl"},
+   glow:[["rgba(180,120,20,.16)",16,0,5]],
+   rim:{w:2,c:"#E8A33D"},
+   dec:[{d:"dot",x:.075,y:.5,r:4,c:"rgba(232,163,61,.55)"}],
+   tail:{k:"tri",x:-58,w:22,h:14,c:"#E8A33D",flip:true},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:"#2E2208"},
+   mt:{c:"#B5893A"},av:["#F5BC5C","#C4831C","#FFFFFF"],
+   stroke:NOSTROKE,pad:[18,18,18,34]},
 
-  {id:"pill",n:"Bubble Pill",base:"#FFFFFF",veil:0,shape:{k:"rr",r:999},
-   glow:[["rgba(22,26,38,.12)",20,0,7]],rim:HAIR,
-   tail:{k:"orb",x:24,r:9,c:"#FFFFFF"},
-   tx:{f:'"Manrope",sans-serif',w:600,s:15,lh:1.42,ls:-.006,c:INK},
-   mt:{c:MUTED},av:["#7B8CFF","#4356E0","#FFFFFF"],stroke:NOSTROKE,pad:[20,28,22,28]},
+  {id:"offsetframe",n:"Offset Frame",base:"#FFFFFF",veil:0,shape:{k:"rr",r:3},
+   under:[{d:"frame",dx:9,dy:9,w:2,r:3,c:"#FF3D71"}],
+   glow:[["rgba(22,26,38,.10)",10,0,3]],
+   rim:{w:1.5,c:"#1A1D24"},
+   tail:{k:"tri",x:26,w:22,h:14,c:"#1A1D24"},
+   tx:{f:'"Manrope",sans-serif',w:700,s:15.5,lh:1.4,ls:-.014,c:"#12161C"},
+   mt:{c:"#E0356A"},av:["#FF6690","#E01050","#FFFFFF"],stroke:NOSTROKE},
 
-  {id:"notchcard",n:"Notch Card",base:"#F5F6F8",veil:0,shape:{k:"notch",n:16,c:"tr,bl"},
-   glow:[["rgba(22,26,38,.10)",16,0,5]],rim:{w:1,c:"rgba(22,26,38,.12)"},
-   tail:{k:"notch",x:26,w:22,h:14,c:"#F5F6F8"},
-   tx:{f:'"Chakra Petch",sans-serif',w:600,s:15,lh:1.44,ls:0,c:"#1B2029"},
-   mt:{c:"#828A96",f:'"DM Mono",ui-monospace,monospace'},av:["#4F5B6B","#232A34","#FFFFFF"],stroke:NOSTROKE},
+  {id:"stripe",n:"Stripe Header",base:"#FFFFFF",veil:0,shape:{k:"rr",r:6},
+   glow:[["rgba(90,50,200,.16)",16,0,5]],
+   rim:{w:1.5,c:"#7C4DFF"},
+   dec:[{d:"rect",x:0,y:0,w:1,hpx:54,c:"#7C4DFF"}],
+   tail:{k:"tri",x:26,w:22,h:14,c:"#7C4DFF"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.44,ls:-.008,c:"#181038"},
+   mt:{c:"#FFFFFF"},av:["#FFFFFF","#E4DAFF","#5B2ED6"],
+   stroke:NOSTROKE,pad:[16,20,20,20]},
 
-  {id:"duotone",n:"Duo Tone",base:"#FFFFFF",veil:0,shape:{k:"rr",r:16},
-   glow:SOFT,rim:HAIR,
-   dec:[{d:"rect",x:0,y:0,w:1,hpx:52,c:"#EDF2FE"},
-        {d:"rule",y:.0001,wpx:0,c:"transparent"}],
-   tail:{k:"tri",x:26,w:24,h:14,c:"#FFFFFF"},
-   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:INK},
-   mt:{c:"#6E86AE"},av:["#5B8DEF","#2E5BD8","#FFFFFF"],stroke:NOSTROKE},
+  {id:"step",n:"Step Corner",base:"#F7F8FA",veil:0,shape:{k:"step",n:16},
+   glow:[["rgba(10,140,140,.16)",16,0,5]],
+   rim:{w:2,c:"#0EA5A5"},
+   tail:{k:"tri",x:26,w:22,h:14,c:"#0EA5A5"},
+   tx:{f:'"Chakra Petch",sans-serif',w:600,s:15,lh:1.44,ls:0,c:"#0C2A2A"},
+   mt:{c:"#3D8E8E",f:'"DM Mono",ui-monospace,monospace'},
+   av:["#25C2C2","#0A7F7F","#FFFFFF"],stroke:NOSTROKE,pad:[18,44,18,18]},
 
-  {id:"dotcard",n:"Minimal Dot",base:"#FFFFFF",veil:0,shape:{k:"rr",r:20},
-   glow:SOFT,rim:HAIR,
-   dec:[{d:"dot",x:.93,y:.16,r:5,c:"#FFC53D"}],
-   tail:{k:"tri",x:26,w:24,h:14,c:"#FFFFFF"},
-   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:INK},
-   mt:{c:MUTED},av:["#FFC53D","#E39412","#3A2E0C"],stroke:NOSTROKE},
+  {id:"split",n:"Panel Split",base:"#FFFFFF",veil:0,shape:{k:"rr",r:5},
+   glow:[["rgba(22,26,38,.12)",14,0,5]],
+   rim:{w:1.5,c:"#1A1D24"},
+   dec:[{d:"rect",x:0,y:0,w:.155,h:1,c:"#FFD23F"}],
+   tail:{k:"tri",x:-56,w:22,h:14,c:"#1A1D24",flip:true},
+   tx:{f:'"Manrope",sans-serif',w:700,s:15.5,lh:1.4,ls:-.012,c:"#16191F"},
+   mt:{c:"#8A7326"},av:["#FFD23F","#D9A100","#221C05"],
+   stroke:NOSTROKE,pad:[18,18,18,80]},
 
-  {id:"graphite",n:"Graphite Light",base:"#EDEEF1",veil:0,shape:{k:"rr",r:14},
-   glow:[["rgba(22,26,38,.12)",16,0,5]],
-   dec:[{d:"rule",y:.99,inset:.06,wpx:1,c:"rgba(22,26,38,.10)"}],
-   tail:{k:"tri",x:26,w:24,h:14,c:"#EDEEF1"},
-   tx:{f:'"Manrope",sans-serif',w:700,s:15.5,lh:1.4,ls:-.012,c:"#1A1E25"},
-   mt:{c:"#7E858F"},av:["#5A6472","#2B313A","#FFFFFF"],stroke:NOSTROKE}
+  {id:"outline",n:"Outline Only",base:"#FFFFFF",veil:0,shape:{k:"rr",r:10},
+   rim:{w:2.5,c:"#FF4FA3"},
+   tail:{k:"tri",x:28,w:24,h:15,c:"#FF4FA3"},
+   tx:{f:'"Gabarito",sans-serif',w:700,s:16,lh:1.38,ls:-.014,c:"#2A0C1D"},
+   mt:{c:"#DB3E8C"},av:["#FF7BBC","#E01A78","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"chamfer",n:"Chamfer",base:"#FDFDFF",veil:0,
+   shape:{k:"notch",n:14,c:"tl,tr,br,bl"},
+   glow:[["rgba(60,80,220,.16)",16,0,5]],
+   rim:{w:2,c:"#4B5CE8"},
+   tail:{k:"tri",x:30,w:22,h:14,c:"#4B5CE8"},
+   tx:{f:'"Gabarito",sans-serif',w:600,s:15.5,lh:1.42,ls:-.012,c:"#12163A"},
+   mt:{c:"#5A68D4"},av:["#6C7BF5","#2F3ECB","#FFFFFF"],stroke:NOSTROKE}
 
   ];
 
