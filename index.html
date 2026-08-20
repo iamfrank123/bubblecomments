@@ -1081,7 +1081,7 @@ input[type=range]::-moz-range-thumb{
     <div class="mark__glyph">↩</div>
     <div>
       <div class="mark__name">Reply Bubble Studio</div>
-      <div class="mark__sub">50 sticker skins · one comment</div>
+      <div class="mark__sub">70 sticker skins · one comment</div>
     </div>
   </div>
   <div class="topbar__spacer"></div>
@@ -1243,7 +1243,7 @@ input[type=range]::-moz-range-thumb{
   <section class="stage">
     <div class="stage__head">
       <div>
-        <h2>One comment, fifty ways</h2>
+        <h2>One comment, seventy ways</h2>
         <p>Click any comment to edit it in place. Lock a bubble to give it its own line, download any of them as a PNG, or expand one onto a clean ground to screenshot. Fifteen load at a time.</p>
       </div>
     </div>
@@ -1254,7 +1254,7 @@ input[type=range]::-moz-range-thumb{
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         <span id="moreLabel">Show 15 more</span>
       </button>
-      <button class="more__btn" type="button" id="allBtn">Show all 50</button>
+      <button class="more__btn" type="button" id="allBtn">Show all 70</button>
     </div>
   </section>
 </main>
@@ -1647,6 +1647,32 @@ input[type=range]::-moz-range-thumb{
         break;
       }
 
+      /* flat accents: bars, rails, bands, rules, dots */
+      case "rect": {
+        const rx = (D.x || 0) * W, ry = (D.y || 0) * H;
+        const rw = D.wpx != null ? D.wpx : (D.w != null ? D.w * W : W);
+        const rh = D.hpx != null ? D.hpx : (D.h != null ? D.h * H : H);
+        c.fillStyle = D.c;
+        if (D.r) { rr(c, rx, ry, rw, rh, D.r); c.fill(); }
+        else c.fillRect(rx, ry, rw, rh);
+        break;
+      }
+
+      case "rule": {
+        const inset = (D.inset != null ? D.inset : 0) * W;
+        c.fillStyle = D.c;
+        c.fillRect(inset, (D.y != null ? D.y : .5) * H, W - inset * 2, D.wpx || 1);
+        break;
+      }
+
+      case "dot": {
+        c.fillStyle = D.c;
+        c.beginPath();
+        c.arc((D.x != null ? D.x : .5) * W, (D.y != null ? D.y : .5) * H, D.r || 4, 0, TAU);
+        c.fill();
+        break;
+      }
+
       case "noise": {
         const t = document.createElement("canvas");
         t.width = Math.max(1, Math.ceil(W)); t.height = Math.max(1, Math.ceil(H));
@@ -1723,6 +1749,10 @@ input[type=range]::-moz-range-thumb{
 
   /* ---------------- the spec painter ---------------- */
   const DAMP = .55;   /* global decor restraint — text legibility wins */
+  const PATTERN = {
+    stars: 1, sparks: 1, grid: 1, pgrid: 1, dots: 1, lines: 1, rings: 1,
+    orbit: 1, wave: 1, bars: 1, rays: 1, streaks: 1, constel: 1, hex: 1, topo: 1
+  };
 
   function paintSpec(c, m, sp) {
     const shape = sp.shape || { k: "rr", r: 20 };
@@ -1748,10 +1778,11 @@ input[type=range]::-moz-range-thumb{
     shapePath(c, 0, 0, m.w, m.h, shape);
     c.clip();
     (sp.bg || []).forEach(L => paintLayer(c, m, L));
-    /* decor is damped so pattern never competes with the comment */
-    (sp.dec || []).forEach(D => paintDecor(c, m, Object.assign({}, D, {
-      a: (D.a != null ? D.a : 1) * DAMP
-    })));
+    /* damp texture so it never competes with the comment, but leave
+       structural accents (bars, rules, dots) at full strength */
+    (sp.dec || []).forEach(D => paintDecor(c, m, PATTERN[D.d]
+      ? Object.assign({}, D, { a: (D.a != null ? D.a : 1) * DAMP })
+      : D));
     /* flat veil: calms the whole field without flattening the gradient */
     const veil = sp.veil != null ? sp.veil : .26;
     if (veil > 0) {
@@ -1781,9 +1812,141 @@ input[type=range]::-moz-range-thumb{
   }
 
   /* ================================================================
+     SPECS — 20 light, flat skins
+     Paper-like grounds, dark text, hairline rims, no glow and no
+     veil. veil:0 matters: the default dark veil would grey them out.
+     ================================================================ */
+  const SOFT = [["rgba(22,26,38,.10)", 18, 0, 6]];
+  const HAIR = { w: 1, c: "rgba(22,26,38,.10)" };
+  /* light skins take a white outline, not black: on a pale card a black
+     stroke just fattens the glyphs, while white cuts them out cleanly */
+  const NOSTROKE = ["#FFFFFF", 2.2];
+  const MUTED = "#8A9099";
+  const INK = "#191C22";
+
+  const GEN_LIGHT = [
+
+  {id:"paperwhite",n:"Paper White",base:"#FFFFFF",veil:0,shape:{k:"rr",r:18},
+   glow:SOFT,rim:HAIR,tail:{k:"tri",x:26,w:24,h:14,c:"#FFFFFF"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:INK},
+   mt:{c:MUTED},av:["#5B8DEF","#2E5BD8","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"cloud",n:"Cloud",base:"#F3F4F7",veil:0,shape:{k:"rr",r:22},
+   glow:[["rgba(22,26,38,.09)",16,0,5]],tail:{k:"tri",x:26,w:24,h:14,c:"#F3F4F7"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:"#22262E"},
+   mt:{c:"#868C96"},av:["#9AA3B2","#6B7382","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"linen",n:"Linen",base:"#FAF6EE",veil:0,shape:{k:"rr",r:10},
+   glow:[["rgba(60,48,30,.12)",16,0,5]],rim:{w:1,c:"rgba(80,64,40,.12)"},
+   tail:{k:"tri",x:26,w:24,h:14,c:"#FAF6EE"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.44,ls:-.006,c:"#2B2418"},
+   mt:{c:"#9A8E79"},av:["#C9A96B","#9A7B3C","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"mint",n:"Soft Mint",base:"#E8F7F0",veil:0,shape:{k:"rr",r:20},
+   glow:[["rgba(20,80,60,.12)",18,0,6]],tail:{k:"tri",x:26,w:24,h:14,c:"#E8F7F0"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:"#12352B"},
+   mt:{c:"#6E9A8B"},av:["#3FC79A","#149C74","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"blush",n:"Blush",base:"#FDEEF2",veil:0,shape:{k:"rr",r:24},
+   glow:[["rgba(120,30,60,.12)",18,0,6]],tail:{k:"drop",x:26,w:22,h:20,c:"#FDEEF2",rot:6},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:"#3A1420"},
+   mt:{c:"#B98598"},av:["#FF7EA6","#E23E70","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"sky",n:"Sky Tint",base:"#E9F1FD",veil:0,shape:{k:"rr",r:20},
+   glow:[["rgba(20,50,110,.12)",18,0,6]],tail:{k:"tri",x:26,w:24,h:14,c:"#E9F1FD"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:"#132540"},
+   mt:{c:"#7E93B3"},av:["#5AA0F5","#2B6BD4","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"butter",n:"Butter",base:"#FEF6DC",veil:0,shape:{k:"rr",r:20},
+   glow:[["rgba(110,80,10,.13)",18,0,6]],tail:{k:"tri",x:26,w:24,h:14,c:"#FEF6DC"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:"#3A2E0C"},
+   mt:{c:"#AA9758"},av:["#F5C93F","#D19A08","#3A2E0C"],stroke:NOSTROKE},
+
+  {id:"lavender",n:"Lavender Note",base:"#F1EDFB",veil:0,shape:{k:"rr",r:20},
+   glow:[["rgba(60,35,120,.12)",18,0,6]],tail:{k:"tri",x:26,w:24,h:14,c:"#F1EDFB"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:"#241A3D"},
+   mt:{c:"#9089B0"},av:["#A78BFA","#6D45D8","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"sage",n:"Sage",base:"#EDF3EA",veil:0,shape:{k:"rr",r:20},
+   glow:[["rgba(40,70,30,.12)",18,0,6]],tail:{k:"tri",x:26,w:24,h:14,c:"#EDF3EA"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:"#1F2C18"},
+   mt:{c:"#88997C"},av:["#7CB763","#4C8A38","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"peach",n:"Peach",base:"#FDEFE6",veil:0,shape:{k:"rr",r:22},
+   glow:[["rgba(130,60,20,.12)",18,0,6]],tail:{k:"drop",x:26,w:22,h:20,c:"#FDEFE6",rot:-5},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:"#3A2015"},
+   mt:{c:"#B8917C"},av:["#FF9C6B","#E2652B","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"ice",n:"Ice",base:"#E8F6F8",veil:0,shape:{k:"rr",r:20},
+   glow:[["rgba(15,70,85,.12)",18,0,6]],tail:{k:"tri",x:26,w:24,h:14,c:"#E8F6F8"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:"#0F2E36"},
+   mt:{c:"#77A0A9"},av:["#48C6DE","#1490AC","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"bone",n:"Bone Serif",base:"#F7F4EE",veil:0,shape:{k:"rr",r:6},
+   glow:[["rgba(50,42,30,.13)",18,0,6]],rim:{w:1,c:"rgba(60,50,34,.14)"},
+   tail:{k:"tri",x:26,w:22,h:13,c:"#F7F4EE"},
+   tx:{f:'"Newsreader",Georgia,serif',w:500,s:17.5,lh:1.38,ls:-.002,c:"#241F17"},
+   mt:{c:"#9B9283",f:'"DM Mono",ui-monospace,monospace'},av:["#8C7A5E","#5C4E38","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"monocard",n:"Mono Card",base:"#FFFFFF",veil:0,shape:{k:"rr",r:6},
+   glow:[["rgba(22,26,38,.09)",14,0,4]],rim:{w:1,c:"rgba(22,26,38,.18)"},
+   tail:{k:"tri",x:24,w:20,h:12,c:"#FFFFFF"},
+   tx:{f:'"DM Mono",ui-monospace,monospace',w:400,s:14,lh:1.55,ls:0,c:"#1B1F26"},
+   mt:{c:"#8A9099",f:'"DM Mono",ui-monospace,monospace'},av:["#2D3340","#11151C","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"coral",n:"Coral Chip",base:"#FFFFFF",veil:0,shape:{k:"rr",r:14},
+   glow:SOFT,rim:HAIR,
+   dec:[{d:"rect",x:0,y:0,wpx:5,h:1,c:"#FF6B57"}],
+   tail:{k:"tri",x:30,w:22,h:13,c:"#FFFFFF"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:INK},
+   mt:{c:MUTED},av:["#FF8A73","#E5432B","#FFFFFF"],stroke:NOSTROKE,pad:[18,18,18,24]},
+
+  {id:"slateline",n:"Slate Line",base:"#FFFFFF",veil:0,shape:{k:"rr",r:4},
+   glow:[["rgba(22,26,38,.08)",12,0,4]],rim:{w:1.4,c:"#242A33"},
+   tail:{k:"tri",x:26,w:22,h:13,c:"#FFFFFF"},
+   tx:{f:'"Manrope",sans-serif',w:700,s:15.5,lh:1.4,ls:-.012,c:"#12161C"},
+   mt:{c:"#7C838D"},av:["#3A424E","#12161C","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"pill",n:"Bubble Pill",base:"#FFFFFF",veil:0,shape:{k:"rr",r:999},
+   glow:[["rgba(22,26,38,.12)",20,0,7]],rim:HAIR,
+   tail:{k:"orb",x:24,r:9,c:"#FFFFFF"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15,lh:1.42,ls:-.006,c:INK},
+   mt:{c:MUTED},av:["#7B8CFF","#4356E0","#FFFFFF"],stroke:NOSTROKE,pad:[20,28,22,28]},
+
+  {id:"notchcard",n:"Notch Card",base:"#F5F6F8",veil:0,shape:{k:"notch",n:16,c:"tr,bl"},
+   glow:[["rgba(22,26,38,.10)",16,0,5]],rim:{w:1,c:"rgba(22,26,38,.12)"},
+   tail:{k:"notch",x:26,w:22,h:14,c:"#F5F6F8"},
+   tx:{f:'"Chakra Petch",sans-serif',w:600,s:15,lh:1.44,ls:0,c:"#1B2029"},
+   mt:{c:"#828A96",f:'"DM Mono",ui-monospace,monospace'},av:["#4F5B6B","#232A34","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"duotone",n:"Duo Tone",base:"#FFFFFF",veil:0,shape:{k:"rr",r:16},
+   glow:SOFT,rim:HAIR,
+   dec:[{d:"rect",x:0,y:0,w:1,hpx:52,c:"#EDF2FE"},
+        {d:"rule",y:.0001,wpx:0,c:"transparent"}],
+   tail:{k:"tri",x:26,w:24,h:14,c:"#FFFFFF"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:INK},
+   mt:{c:"#6E86AE"},av:["#5B8DEF","#2E5BD8","#FFFFFF"],stroke:NOSTROKE},
+
+  {id:"dotcard",n:"Minimal Dot",base:"#FFFFFF",veil:0,shape:{k:"rr",r:20},
+   glow:SOFT,rim:HAIR,
+   dec:[{d:"dot",x:.93,y:.16,r:5,c:"#FFC53D"}],
+   tail:{k:"tri",x:26,w:24,h:14,c:"#FFFFFF"},
+   tx:{f:'"Manrope",sans-serif',w:600,s:15.5,lh:1.42,ls:-.008,c:INK},
+   mt:{c:MUTED},av:["#FFC53D","#E39412","#3A2E0C"],stroke:NOSTROKE},
+
+  {id:"graphite",n:"Graphite Light",base:"#EDEEF1",veil:0,shape:{k:"rr",r:14},
+   glow:[["rgba(22,26,38,.12)",16,0,5]],
+   dec:[{d:"rule",y:.99,inset:.06,wpx:1,c:"rgba(22,26,38,.10)"}],
+   tail:{k:"tri",x:26,w:24,h:14,c:"#EDEEF1"},
+   tx:{f:'"Manrope",sans-serif',w:700,s:15.5,lh:1.4,ls:-.012,c:"#1A1E25"},
+   mt:{c:"#7E858F"},av:["#5A6472","#2B313A","#FFFFFF"],stroke:NOSTROKE}
+
+  ];
+
+  /* ================================================================
      SPECS — 36 gradient-forward skins
      ================================================================ */
-  const GEN = [
+  const GEN_DARK = [
 
   {id:"solar",n:"Solar Flare",base:"#150B05",shape:{k:"rr",r:26},
    glow:[["rgba(255,110,20,.34)",34,0,14]],
@@ -2185,6 +2348,8 @@ input[type=range]::-moz-range-thumb{
   const DEF_PAD = [20, 20, 20, 20];
   const REG = {};
 
+  const GEN = GEN_LIGHT.concat(GEN_DARK);
+
   GEN.forEach(sp => {
     const pad = sp.pad || DEF_PAD;
     REG[sp.id] = {
@@ -2263,6 +2428,8 @@ input[type=range]::-moz-range-thumb{
 
   window.RS = {
     GEN: GEN,
+    GEN_LIGHT: GEN_LIGHT,
+    GEN_DARK: GEN_DARK,
     skin: function (id) { return REG[id] || null; },
     paintDom: paintDom,
     styleDom: styleDom,
@@ -2341,8 +2508,13 @@ input[type=range]::-moz-range-thumb{
   const EXPAND_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg>';
   const PNG_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 10.5 12 15l4.5-4.5M4 19h16"/></svg>';
 
-  /* ---------- skin roster: 14 hand-built + 36 engine skins ---------- */
-  const SKINS = LEGACY.concat(window.RS.GEN.map(g => ({ id: g.id, name: g.n, gen: true })));
+  /* ---------- skin roster ----------
+     light and flat first, then the 14 hand-built skins, then the
+     gradient set — so the calmest designs are what you land on */
+  const asGen = g => ({ id: g.id, name: g.n, gen: true });
+  const SKINS = window.RS.GEN_LIGHT.map(asGen)
+    .concat(LEGACY)
+    .concat(window.RS.GEN_DARK.map(asGen));
 
   /* ---------- build ---------- */
   const grid = $("#grid");
