@@ -361,7 +361,7 @@ input[type=range]::-moz-range-thumb{
   color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .slot__rule{flex:1;height:1px;background:var(--line);}
-.slot__tools{display:flex;gap:4px;opacity:0;transition:opacity .18s;}
+.slot__tools{display:flex;gap:3px;opacity:0;transition:opacity .18s;flex:none;}
 .slot:hover .slot__tools,.slot:focus-within .slot__tools{opacity:1;}
 /* touch devices never hover — the tools must stay reachable there */
 @media (hover:none){
@@ -1074,6 +1074,11 @@ input[type=range]::-moz-range-thumb{
 
 .tool[data-busy="true"],.icon-btn[data-busy="true"]{opacity:.45;pointer-events:none;}
 .tool[data-act="png"]{border-color:var(--line-2);color:var(--ink);}
+/* the typeface arrows are a pair — group them and set them apart */
+.tool--type{background:var(--panel-2);}
+.tool--type[data-act="font-prev"]{border-top-right-radius:3px;border-bottom-right-radius:3px;}
+.tool--type[data-act="font-next"]{border-top-left-radius:3px;border-bottom-left-radius:3px;margin-right:5px;}
+.tool--type:hover{background:var(--ink);color:var(--ground);border-color:var(--ink);}
 </style>
 
 <header class="topbar">
@@ -2568,6 +2573,18 @@ input[type=range]::-moz-range-thumb{
   const LOCK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
   const EXPAND_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg>';
   const PNG_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 10.5 12 15l4.5-4.5M4 19h16"/></svg>';
+  const PREV_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg>';
+  const NEXT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg>';
+
+  /* one definition, used by both the engine and hand-built branches */
+  const TOOLS =
+    '<span class="slot__tools">' +
+      '<button class="tool tool--type" type="button" data-act="font-prev" title="Previous typeface (applies to every bubble)" aria-label="Previous typeface">' + PREV_ICON + '</button>' +
+      '<button class="tool tool--type" type="button" data-act="font-next" title="Next typeface (applies to every bubble)" aria-label="Next typeface">' + NEXT_ICON + '</button>' +
+      '<button class="tool" type="button" data-act="lock" aria-pressed="false" title="Lock this bubble’s own text">' + LOCK_ICON + '</button>' +
+      '<button class="tool" type="button" data-act="expand" title="Expand for screenshot">' + EXPAND_ICON + '</button>' +
+      '<button class="tool" type="button" data-act="png" title="Download PNG">' + PNG_ICON + '</button>' +
+    '</span>';
 
   /* ---------- skin roster ----------
      light and flat first, then the 14 hand-built skins, then the
@@ -2609,12 +2626,7 @@ input[type=range]::-moz-range-thumb{
       slot.innerHTML =
         '<div class="slot__bar">' +
           '<span class="slot__name">' + skin.name + '</span>' +
-          '<span class="slot__rule"></span>' +
-          '<span class="slot__tools">' +
-            '<button class="tool" type="button" data-act="lock" aria-pressed="false" title="Lock this bubble’s own text">' + LOCK_ICON + '</button>' +
-            '<button class="tool" type="button" data-act="expand" title="Expand for screenshot">' + EXPAND_ICON + '</button>' +
-            '<button class="tool" type="button" data-act="png" title="Download PNG">' + PNG_ICON + '</button>' +
-          '</span>' +
+          '<span class="slot__rule"></span>' + TOOLS +
         '</div>' +
         '<div class="slot__mount">' +
           '<article class="bubble b-gen" data-skin="' + skin.id + '">' +
@@ -2650,12 +2662,7 @@ input[type=range]::-moz-range-thumb{
     slot.innerHTML =
       '<div class="slot__bar">' +
         '<span class="slot__name">' + skin.name + '</span>' +
-        '<span class="slot__rule"></span>' +
-        '<span class="slot__tools">' +
-          '<button class="tool" type="button" data-act="lock" aria-pressed="false" title="Lock this bubble’s own text">' + LOCK_ICON + '</button>' +
-          '<button class="tool" type="button" data-act="expand" title="Expand for screenshot">' + EXPAND_ICON + '</button>' +
-          '<button class="tool" type="button" data-act="png" title="Download PNG">' + PNG_ICON + '</button>' +
-        '</span>' +
+        '<span class="slot__rule"></span>' + TOOLS +
       '</div>' +
       '<div class="slot__mount">' +
         '<article class="bubble b-' + skin.id + '" data-skin="' + skin.id + '">' + body + tail + '</article>' +
@@ -2929,11 +2936,28 @@ input[type=range]::-moz-range-thumb{
     if (e.key === "Escape") el.blur();
   });
 
+  /* ---------- typeface stepping straight from a bubble ---------- */
+  /* the arrows drive the sidebar select, so both stay in step and the
+     change lands on every bubble through the same code path */
+  function stepFont(dir) {
+    const sel = $("#fontSel");
+    const opts = Array.from(sel.options);
+    let i = opts.findIndex(o => o.value === sel.value);
+    if (i < 0) i = 0;
+    i = (i + dir + opts.length) % opts.length;
+    sel.value = opts[i].value;
+    sel.dispatchEvent(new Event("change"));
+    const toast = window.ReplyStudio && window.ReplyStudio.toast;
+    if (toast) toast(opts[i].value ? "Typeface: " + opts[i].textContent : "Typeface: each skin's own");
+  }
+
   /* ---------- slot tools ---------- */
   grid.addEventListener("click", e => {
     const btn = e.target.closest(".tool");
     if (!btn) return;
     const slot = btn.closest(".slot");
+    if (btn.dataset.act === "font-prev") { stepFont(-1); return; }
+    if (btn.dataset.act === "font-next") { stepFont(1); return; }
     if (btn.dataset.act === "lock") {
       const on = slot.dataset.locked !== "true";
       slot.dataset.locked = String(on);
@@ -3991,6 +4015,6 @@ input[type=range]::-moz-range-thumb{
     }
   }
 
-  window.ReplyStudio = { exportSlot: exportSlot };
+  window.ReplyStudio = { exportSlot: exportSlot, toast: say };
 })();
 </script>
