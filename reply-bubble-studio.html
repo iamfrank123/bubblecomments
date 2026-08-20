@@ -78,7 +78,7 @@
   --ui-tracka:0em;
   --ui-hue:0deg;
   --ui-sat:1;
-  --ui-stroke:1;
+  --ui-stroke:0;
 }
 
 *{box-sizing:border-box;}
@@ -93,6 +93,8 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 button,input,select,textarea{font:inherit;color:inherit;}
+/* never inherit the UA button face — it renders light on both themes */
+button{background:none;border:none;appearance:none;-webkit-appearance:none;}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px;}
 
 /* ============================================================
@@ -281,10 +283,18 @@ input[type=range]::-moz-range-thumb{
 
 .switch{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:100%;text-align:left;
+  padding:10px 12px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:11px;
   cursor:pointer;user-select:none;
+  transition:border-color .16s,background .16s;
 }
-.switch__label{font-size:13px;color:var(--ink-2);line-height:1.35;}
-.switch__label b{display:block;color:var(--ink);font-weight:600;font-size:13.5px;}
+.switch:hover{border-color:var(--line-2);}
+.switch[aria-pressed="true"]{background:color-mix(in srgb, var(--accent) 10%, var(--panel-2));border-color:color-mix(in srgb, var(--accent) 42%, var(--line));}
+.switch__label{font-size:12.5px;color:var(--ink-2);line-height:1.35;}
+.switch__label b{display:block;color:var(--ink);font-weight:700;font-size:13.5px;margin-bottom:2px;}
 .switch__track{
   flex:none;width:42px;height:24px;border-radius:99px;
   background:var(--panel-2);border:1px solid var(--line-2);
@@ -311,6 +321,9 @@ input[type=range]::-moz-range-thumb{
    ============================================================ */
 .stage{
   min-height:60vh;padding:26px 22px 40px;
+  /* engine skins paint onto a canvas that overhangs the card for glow and
+     tail room; clip the x axis so that overhang never scrolls the page */
+  overflow-x:clip;overflow-y:visible;
   background-color:var(--mat);
   background-image:
     linear-gradient(var(--grid) 1px,transparent 1px),
@@ -426,6 +439,8 @@ input[type=range]::-moz-range-thumb{
 :root[data-size-fixed="1"] .bubble__text{font-size:var(--ui-size)!important;}
 :root[data-lh-fixed="1"] .bubble__text{line-height:var(--ui-lh)!important;}
 :root[data-track-fixed="1"] .bubble__text{letter-spacing:var(--ui-tracka)!important;}
+/* "As typed" is authoritative: it clears any uppercase a skin bakes in */
+:root[data-case="none"] .bubble__text{text-transform:none;}
 :root[data-case="lower"] .bubble__text{text-transform:lowercase;}
 :root[data-case="upper"] .bubble__text{text-transform:uppercase;}
 :root[data-case="title"] .bubble__text{text-transform:capitalize;}
@@ -757,7 +772,7 @@ input[type=range]::-moz-range-thumb{
   border-radius:2px;background:linear-gradient(140deg,#F7E6AE,#A67C22);color:#0B1410;
 }
 .b-luxe .bubble__meta{
-  color:#D9B45B;font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:#D9B45B;font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.18em;
 }
 .b-luxe .bubble__reply{font-size:9px;opacity:.65;letter-spacing:.2em;}
 .b-luxe .bubble__tail{
@@ -855,7 +870,6 @@ input[type=range]::-moz-range-thumb{
   background:#150A0C;color:#FFF0E2;
   border-radius:44px 44px 44px 14px;padding:22px 22px;
   box-shadow:0 16px 40px rgba(21,10,12,.55), inset 0 0 0 1px rgba(255,140,60,.32), 0 0 32px rgba(255,80,30,.24);
-  text-transform:uppercase;
 }
 .b-lava .lava-blobs{position:absolute;inset:0;border-radius:inherit;z-index:0;overflow:hidden;}
 .b-lava .lava-blobs i{position:absolute;display:block;border-radius:50%;filter:blur(20px);}
@@ -1117,8 +1131,8 @@ input[type=range]::-moz-range-thumb{
       <div class="field">
         <label>Text outline</label>
         <div class="seg" id="strokeSeg" role="group" aria-label="Text outline">
-          <button type="button" data-stroke="0" aria-pressed="false">Off</button>
-          <button type="button" data-stroke="1" aria-pressed="true">Soft</button>
+          <button type="button" data-stroke="0" aria-pressed="true">Off</button>
+          <button type="button" data-stroke="1" aria-pressed="false">Soft</button>
           <button type="button" data-stroke="1.8" aria-pressed="false">Bold</button>
         </div>
       </div>
@@ -2187,7 +2201,7 @@ input[type=range]::-moz-range-thumb{
     s.setProperty("--a2", sk.avatar.to);
     s.setProperty("--a3", sk.avatar.fg);
     s.setProperty("--fst", t.italic ? "italic" : "normal");
-    s.setProperty("--ttf", sk.upper ? "uppercase" : "none");
+    s.setProperty("--ttf", "none");
     s.setProperty("--tsh", sk.textGlow ? "0 0 " + sk.textGlow[1] + "px " + sk.textGlow[0] : "none");
     s.setProperty("--sw", sk.stroke[1] + "px");
     s.setProperty("--sc", sk.stroke[0]);
@@ -2434,8 +2448,10 @@ input[type=range]::-moz-range-thumb{
   function setText(value, exceptEl) {
     $$(".slot").forEach(slot => {
       if (slot.dataset.locked === "true") return;
-      const el = $(".bubble__text", slot);
-      if (el === exceptEl) return;
+      /* an expanded bubble lives in the overlay, not in its slot */
+      const el = $(".bubble__text", slot) ||
+                 $('.focus__ground .bubble[data-skin="' + slot.dataset.skin + '"] .bubble__text');
+      if (!el || el === exceptEl) return;
       if (el.textContent !== value) el.textContent = value;
     });
   }
@@ -2550,9 +2566,18 @@ input[type=range]::-moz-range-thumb{
   });
 
   /* ---------- in-place editing ---------- */
+  /* listeners sit on the document, not the grid: an expanded bubble is
+     re-parented into the overlay and would otherwise stop syncing */
+  function slotFor(el) {
+    const direct = el.closest(".slot");
+    if (direct) return direct;
+    const bubble = el.closest(".bubble");
+    return bubble ? $('.slot[data-skin="' + bubble.dataset.skin + '"]') : null;
+  }
+
   /* the placeholder text selects itself, so typing replaces it outright */
-  grid.addEventListener("focusin", e => {
-    const el = e.target.closest(".bubble__text");
+  document.addEventListener("focusin", e => {
+    const el = e.target.closest && e.target.closest(".bubble__text");
     if (!el || el.textContent.trim() !== DEFAULT_TEXT) return;
     const range = document.createRange();
     range.selectNodeContents(el);
@@ -2565,26 +2590,26 @@ input[type=range]::-moz-range-thumb{
     if (textIn.value.trim() === DEFAULT_TEXT) textIn.select();
   });
 
-  grid.addEventListener("input", e => {
-    const el = e.target.closest(".bubble__text");
+  document.addEventListener("input", e => {
+    const el = e.target.closest && e.target.closest(".bubble__text");
     if (!el) return;
-    const slot = el.closest(".slot");
+    const slot = slotFor(el);
+    if (!slot || slot.dataset.locked === "true") return;
     const value = el.textContent;
-    if (slot.dataset.locked === "true") return;
     textIn.value = value;
     if (mirror) setText(value, el);
   });
 
   // keep pasted text plain so a skin's typography survives
-  grid.addEventListener("paste", e => {
-    if (!e.target.closest(".bubble__text")) return;
+  document.addEventListener("paste", e => {
+    if (!e.target.closest || !e.target.closest(".bubble__text")) return;
     e.preventDefault();
     const txt = (e.clipboardData || window.clipboardData).getData("text").replace(/\s+/g, " ");
     document.execCommand("insertText", false, txt);
   });
 
-  grid.addEventListener("keydown", e => {
-    const el = e.target.closest(".bubble__text");
+  document.addEventListener("keydown", e => {
+    const el = e.target.closest && e.target.closest(".bubble__text");
     if (!el) return;
     if (e.key === "Enter") { e.preventDefault(); el.blur(); }
     if (e.key === "Escape") el.blur();
@@ -2806,7 +2831,7 @@ input[type=range]::-moz-range-thumb{
     c.globalAlpha = 1;
     c.font = (mt.userWeight || 700) + " " + (mt.userSize || 12) + "px " + mt.family;
     if ("letterSpacing" in c) c.letterSpacing = ((mt.userLs || 0) * (mt.userSize || 12)).toFixed(2) + "px";
-    let u = sp.upper ? user.toUpperCase() : user;
+    let u = user;
     while (c.measureText(u).width > m.w - m.pad[1] - mx - 22 && u.length > 4) u = u.slice(0, -2) + "…";
     c.fillText(u, mx, py + 26);
     c.restore();
@@ -3421,11 +3446,12 @@ input[type=range]::-moz-range-thumb{
     };
   }
 
-  function applyCase(t, mode, skinUpper) {
+  /* the Letter case control is the only authority — a skin never forces case */
+  function applyCase(t, mode) {
     if (mode === "lower") return t.toLowerCase();
     if (mode === "upper") return t.toUpperCase();
     if (mode === "title") return t.replace(/(^|\s)(\S)/g, (_, a, b) => a + b.toUpperCase());
-    return skinUpper ? t.toUpperCase() : t;
+    return t;
   }
 
   function wrap(c, text, maxW) {
@@ -3477,7 +3503,7 @@ input[type=range]::-moz-range-thumb{
     if (!bubble) throw new Error("bubble not found");
     const rawText = (bubble.querySelector(".bubble__text").textContent || "").trim();
     const user = (bubble.querySelector(".bubble__user").textContent || "@user").trim();
-    const text = applyCase(rawText || "Insert text here", k.caseMode, sp.upper);
+    const text = applyCase(rawText || "Insert text here", k.caseMode);
 
     const family = k.family || sp.text.family;
     const weight = k.weight || sp.text.weight;
