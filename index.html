@@ -74,7 +74,7 @@
 
 /* live typography knobs */
 :root{
-  --ui-size:16px;
+  --ui-size:17px;
   --ui-lh:1.4;
   --ui-tracka:0em;
   --ui-hue:0deg;
@@ -416,6 +416,15 @@ input[type=range]::-moz-range-thumb{
 }
 .bubble__reply{display:block;opacity:.62;font-size:10px;letter-spacing:.05em;text-transform:uppercase;}
 .bubble__user{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;}
+/* the handle is editable in place, exactly like the comment body.
+   the "@" sits outside it so it can never be deleted */
+.bubble__handle{
+  outline:none;cursor:text;border-radius:4px;
+  transition:box-shadow .15s;
+}
+.bubble__handle:hover{box-shadow:0 0 0 1px color-mix(in srgb, currentColor 30%, transparent);}
+.bubble__handle:focus{box-shadow:0 0 0 2px color-mix(in srgb, currentColor 60%, transparent);}
+.bubble__handle:empty::before{content:"username";opacity:.5;}
 .bubble__ico{width:15px;height:15px;flex:none;opacity:.55;}
 .bubble__text{
   position:relative;z-index:3;
@@ -1150,8 +1159,8 @@ input[type=range]::-moz-range-thumb{
         </select>
       </div>
       <div class="slider">
-        <div class="slider__top"><span>Size</span><span class="slider__val" id="sizeVal">Auto</span></div>
-        <input type="range" id="sizeRange" min="11" max="30" step="0.5" value="16">
+        <div class="slider__top"><span>Size</span><span class="slider__val" id="sizeVal">17.0 px</span></div>
+        <input type="range" id="sizeRange" min="11" max="30" step="0.5" value="17">
       </div>
       <div class="slider">
         <div class="slider__top"><span>Line height</span><span class="slider__val" id="lhVal">Auto</span></div>
@@ -2356,7 +2365,8 @@ input[type=range]::-moz-range-thumb{
           (skin.gen ? "" : ' style="background:' + AVATARS[i % AVATARS.length] + '"') + '></span>' +
         '<span class="bubble__meta">' +
           '<span class="bubble__reply">Reply to</span>' +
-          '<span class="bubble__user">@user</span>' +
+          '<span class="bubble__user">@<span class="bubble__handle" contenteditable="true" ' +
+            'spellcheck="false" role="textbox" aria-label="Username being replied to">user</span></span>' +
         '</span>' + REPLY_ICON +
       '</div>' +
       '<p class="bubble__text" contenteditable="true" spellcheck="false" role="textbox" aria-label="Comment text for ' + skin.name + '"></p>';
@@ -2481,10 +2491,17 @@ input[type=range]::-moz-range-thumb{
   const textIn = $("#textIn");
   let mirror = true;
 
-  function setUser(name) {
-    const clean = (name || "user").replace(/^@+/, "").trim() || "user";
+  const cleanHandle = v => String(v == null ? "" : v).replace(/[@\s]+/g, "");
+
+  /* exceptEl is the element currently being typed into — rewriting its
+     content would collapse the caret to the start on every keystroke */
+  function setUser(name, exceptEl) {
+    const clean = cleanHandle(name) || "user";
     const initial = clean.charAt(0).toUpperCase();
-    $$(".bubble__user").forEach(el => { el.textContent = "@" + clean; });
+    $$(".bubble__handle").forEach(el => {
+      if (el === exceptEl) return;
+      if (el.textContent !== clean) el.textContent = clean;
+    });
     $$(".bubble__avatar").forEach(el => { el.textContent = initial; });
   }
 
@@ -2554,7 +2571,7 @@ input[type=range]::-moz-range-thumb{
     root.dataset.weightOverride = "0";
     $("#fontSel").value = "";
     $("#weightSel").value = "";
-    sizeRange.value = 16; lhRange.value = 1.4; trackRange.value = 0;
+    sizeRange.value = 17; lhRange.value = 1.4; trackRange.value = 0;
     $("#sizeVal").textContent = "Auto";
     $("#lhVal").textContent = "Auto";
     $("#trackVal").textContent = "Auto";
@@ -2643,16 +2660,37 @@ input[type=range]::-moz-range-thumb{
     if (mirror) setText(value, el);
   });
 
+  /* editing the @handle inside any bubble drives every other bubble,
+     the avatar initial and the sidebar field */
+  document.addEventListener("input", e => {
+    const el = e.target.closest && e.target.closest(".bubble__handle");
+    if (!el) return;
+    const clean = cleanHandle(el.textContent);
+    userIn.value = clean;
+    setUser(clean || "user", el);
+  });
+
+  /* normalise once editing stops, where losing the caret costs nothing */
+  document.addEventListener("blur", e => {
+    const el = e.target.closest && e.target.closest(".bubble__handle");
+    if (!el) return;
+    const clean = cleanHandle(el.textContent) || "user";
+    userIn.value = clean;
+    setUser(clean);
+  }, true);
+
   // keep pasted text plain so a skin's typography survives
   document.addEventListener("paste", e => {
-    if (!e.target.closest || !e.target.closest(".bubble__text")) return;
+    const el = e.target.closest && e.target.closest(".bubble__text, .bubble__handle");
+    if (!el) return;
     e.preventDefault();
-    const txt = (e.clipboardData || window.clipboardData).getData("text").replace(/\s+/g, " ");
+    let txt = (e.clipboardData || window.clipboardData).getData("text").replace(/\s+/g, " ");
+    if (el.classList.contains("bubble__handle")) txt = cleanHandle(txt);
     document.execCommand("insertText", false, txt);
   });
 
   document.addEventListener("keydown", e => {
-    const el = e.target.closest && e.target.closest(".bubble__text");
+    const el = e.target.closest && e.target.closest(".bubble__text, .bubble__handle");
     if (!el) return;
     if (e.key === "Enter") { e.preventDefault(); el.blur(); }
     if (e.key === "Escape") el.blur();
@@ -2751,7 +2789,9 @@ input[type=range]::-moz-range-thumb{
   root.dataset.italic = "0";
   root.dataset.fontOverride = "0";
   root.dataset.weightOverride = "0";
-  root.dataset.sizeFixed = "0";
+  /* size ships fixed at 17px so every skin reads at one deliberate size;
+     line height and tracking still defer to each skin */
+  root.dataset.sizeFixed = "1";
   root.dataset.lhFixed = "0";
   root.dataset.trackFixed = "0";
   reveal(PAGE);
