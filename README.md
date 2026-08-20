@@ -2,7 +2,9 @@
 
 A single-file web app for generating stylish "Reply to @username" comment bubbles in the style of TikTok reply videos — then downloading any of them as a pixel-perfect transparent PNG.
 
-Open `reply-bubble-studio.html` in a browser. No build step, no dependencies, no network calls except Google Fonts.
+Open `index.html` in a browser. No build step, no dependencies, no network calls except Google Fonts.
+
+Deploying is just as plain: point any static host at the repo root. There is no framework to detect and nothing to build — the file is named `index.html` so `/` serves the app directly.
 
 ## Features
 
@@ -33,7 +35,7 @@ The usual DOM-to-PNG approach (serializing to SVG `foreignObject`, then rasteriz
 
 ## Layout
 
-Everything lives in `reply-bubble-studio.html`:
+Everything lives in `index.html`:
 
 1. `<style>` — design tokens, tool chrome, the 14 hand-built skins, engine-skin scaffolding
 2. Markup — top bar, console, stage, focus overlay
