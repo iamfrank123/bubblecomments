@@ -1,3 +1,4 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Reply Bubble Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -345,7 +346,8 @@ input[type=range]::-moz-range-thumb{
 
 .grid{
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(292px,1fr));
+  /* min() keeps the track from forcing overflow on very narrow screens */
+  grid-template-columns:repeat(auto-fill,minmax(min(292px,100%),1fr));
   gap:44px 22px;
   align-items:start;
 }
@@ -361,6 +363,11 @@ input[type=range]::-moz-range-thumb{
 .slot__rule{flex:1;height:1px;background:var(--line);}
 .slot__tools{display:flex;gap:4px;opacity:0;transition:opacity .18s;}
 .slot:hover .slot__tools,.slot:focus-within .slot__tools{opacity:1;}
+/* touch devices never hover — the tools must stay reachable there */
+@media (hover:none){
+  .slot__tools{opacity:1;}
+  .tool{width:32px;height:32px;}
+}
 .tool{
   width:26px;height:26px;display:grid;place-items:center;
   border:1px solid var(--line);border-radius:8px;background:var(--panel);
@@ -946,6 +953,39 @@ input[type=range]::-moz-range-thumb{
 }
 .more__btn--primary:hover{box-shadow:0 11px 24px color-mix(in srgb, var(--accent) 40%, transparent);}
 
+/* ============================================================
+   SMALL SCREENS
+   The console is a tall stack; on a phone it would bury the grid,
+   so it collapses behind the topbar toggle and starts closed.
+   ============================================================ */
+.panel-toggle{display:none;}
+
+@media (max-width:1019px){
+  .panel-toggle{display:grid;}
+  .panel-toggle[aria-expanded="true"]{
+    background:linear-gradient(140deg,var(--accent),var(--accent-2));
+    color:var(--accent-ink);border-color:transparent;
+  }
+  :root[data-panel="closed"] .console{display:none;}
+  .console{padding:16px 14px;gap:16px;}
+  .stage{padding:20px 14px 36px;}
+  .stage__head{margin-bottom:16px;}
+}
+
+@media (max-width:760px){
+  .count{display:none;}
+}
+
+@media (max-width:640px){
+  .grid{grid-template-columns:1fr;gap:38px 0;}
+  .topbar{padding:12px 14px;gap:12px;}
+  .mark__sub{display:none;}
+  .stage__head p{font-size:13px;}
+  .focus{padding:14px;}
+  .focus__ground{padding:32px 20px;}
+  .more{padding:30px 0 4px;}
+}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;}
 }
@@ -1037,6 +1077,9 @@ input[type=range]::-moz-range-thumb{
   </div>
   <div class="topbar__spacer"></div>
   <div class="count" id="count">14 skins</div>
+  <button class="icon-btn panel-toggle" id="panelBtn" type="button" aria-expanded="false" aria-controls="console" title="Settings" aria-label="Show settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>
+  </button>
   <button class="icon-btn" id="themeBtn" type="button" title="Switch theme" aria-label="Switch theme">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
   </button>
@@ -1044,7 +1087,7 @@ input[type=range]::-moz-range-thumb{
 
 <main class="shell">
   <!-- ================= CONSOLE ================= -->
-  <aside class="console">
+  <aside class="console" id="console">
 
     <div class="group">
       <h3 class="group__title">Comment</h3>
@@ -2676,6 +2719,24 @@ input[type=range]::-moz-range-thumb{
 
   document.addEventListener("keydown", e => {
     if (e.key === "Escape" && focus.dataset.open === "true") closeFocus();
+  });
+
+  /* ---------- settings panel (small screens) ---------- */
+  const panelBtn = $("#panelBtn");
+  const narrow = window.matchMedia("(max-width:1019px)");
+
+  function setPanel(open) {
+    root.dataset.panel = open ? "open" : "closed";
+    panelBtn.setAttribute("aria-expanded", String(open));
+    panelBtn.setAttribute("aria-label", open ? "Hide settings" : "Show settings");
+  }
+  setPanel(!narrow.matches);
+  narrow.addEventListener("change", e => setPanel(!e.matches));
+
+  panelBtn.addEventListener("click", () => {
+    const open = root.dataset.panel !== "open";
+    setPanel(open);
+    if (open) $("#console").scrollIntoView({ block: "start", behavior: "smooth" });
   });
 
   /* ---------- theme ---------- */
