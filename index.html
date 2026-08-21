@@ -1011,6 +1011,7 @@ input[type=range]::-moz-range-thumb{
 .focus__panel{
   position:relative;z-index:2;width:min(560px,100%);
   display:flex;flex-direction:column;gap:14px;
+  max-height:calc(100vh - 52px);overflow-y:auto;
 }
 .focus__ground{
   border-radius:20px;padding:52px 40px;display:grid;place-items:center;
@@ -1046,6 +1047,15 @@ input[type=range]::-moz-range-thumb{
 }
 .swatch:hover{transform:translateY(-1px);}
 .swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--accent);}
+/* the gear opens onto the same type knobs as the console, sitting right
+   under the live bubble so a drag is visible while you make it */
+.focus__tune{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 16px;align-items:end;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 14px;
+  box-shadow:var(--shadow-md);
+}
+.focus__tune .ghost-btn{grid-column:1/-1;}
+@media (max-width:560px){.focus__tune{grid-template-columns:1fr;}}
 .sw-light{background:#fff;}
 .sw-dark{background:#0E0C0B;}
 .sw-checker{
@@ -1273,7 +1283,7 @@ input[type=range]::-moz-range-thumb{
   <span class="toast__dot"></span><span id="toastMsg"></span>
 </div>
 
-<div class="focus" id="focus" role="dialog" aria-modal="true" aria-label="Expanded bubble">
+<div class="focus" id="focus" role="dialog" aria-modal="true" aria-label="Bubble preview and type settings">
   <div class="focus__scrim" data-close></div>
   <div class="focus__panel">
     <div class="focus__bar">
@@ -1289,6 +1299,21 @@ input[type=range]::-moz-range-thumb{
       </button>
     </div>
     <div class="focus__ground" id="focusGround" data-ground="light"></div>
+    <div class="focus__tune">
+      <div class="slider">
+        <div class="slider__top"><span>Size</span><span class="slider__val" id="fSizeVal">17.0 px</span></div>
+        <input type="range" id="fSizeRange" min="11" max="30" step="0.5" value="17" aria-label="Text size">
+      </div>
+      <div class="slider">
+        <div class="slider__top"><span>Line height</span><span class="slider__val" id="fLhVal">Auto</span></div>
+        <input type="range" id="fLhRange" min="1.05" max="1.9" step="0.01" value="1.4" aria-label="Line height">
+      </div>
+      <div class="slider">
+        <div class="slider__top"><span>Tracking</span><span class="slider__val" id="fTrackVal">Auto</span></div>
+        <input type="range" id="fTrackRange" min="-0.05" max="0.16" step="0.002" value="0" aria-label="Tracking">
+      </div>
+      <button class="ghost-btn" id="fResetType" type="button">Back to each skin's own type</button>
+    </div>
   </div>
 </div>
 
@@ -2576,7 +2601,7 @@ input[type=range]::-moz-range-thumb{
 
   const REPLY_ICON = '<svg class="bubble__ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h7a9 9 0 0 1 9 9v2"/></svg>';
   const LOCK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
-  const EXPAND_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg>';
+  const GEAR_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>';
   const PNG_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 10.5 12 15l4.5-4.5M4 19h16"/></svg>';
   const PREV_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg>';
   const NEXT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg>';
@@ -2591,7 +2616,7 @@ input[type=range]::-moz-range-thumb{
       '<button class="tool tool--size" type="button" data-act="size-down" title="Smaller text (applies to every bubble)" aria-label="Smaller text">' + MINUS_ICON + '</button>' +
       '<button class="tool tool--size" type="button" data-act="size-up" title="Larger text (applies to every bubble)" aria-label="Larger text">' + PLUS_ICON + '</button>' +
       '<button class="tool" type="button" data-act="lock" aria-pressed="false" title="Lock this bubble’s own text">' + LOCK_ICON + '</button>' +
-      '<button class="tool" type="button" data-act="expand" title="Expand for screenshot">' + EXPAND_ICON + '</button>' +
+      '<button class="tool" type="button" data-act="settings" title="Open this bubble big, with the type settings" aria-label="Bubble settings">' + GEAR_ICON + '</button>' +
       '<button class="tool" type="button" data-act="png" title="Download PNG">' + PNG_ICON + '</button>' +
     '</span>';
 
@@ -2800,16 +2825,19 @@ input[type=range]::-moz-range-thumb{
     root.dataset.sizeFixed = "1";
     root.style.setProperty("--ui-size", sizeRange.value + "px");
     $("#sizeVal").textContent = Number(sizeRange.value).toFixed(1) + " px";
+    syncFocusTune();
   });
   lhRange.addEventListener("input", () => {
     root.dataset.lhFixed = "1";
     root.style.setProperty("--ui-lh", lhRange.value);
     $("#lhVal").textContent = Number(lhRange.value).toFixed(2);
+    syncFocusTune();
   });
   trackRange.addEventListener("input", () => {
     root.dataset.trackFixed = "1";
     root.style.setProperty("--ui-tracka", trackRange.value + "em");
     $("#trackVal").textContent = Number(trackRange.value).toFixed(3) + "em";
+    syncFocusTune();
   });
 
   $("#resetType").addEventListener("click", () => {
@@ -2824,6 +2852,7 @@ input[type=range]::-moz-range-thumb{
     $("#sizeVal").textContent = "Auto";
     $("#lhVal").textContent = "Auto";
     $("#trackVal").textContent = "Auto";
+    syncFocusTune();
   });
   hueRange.addEventListener("input", () => {
     root.style.setProperty("--ui-hue", hueRange.value + "deg");
@@ -3011,7 +3040,8 @@ input[type=range]::-moz-range-thumb{
     parked = bubble;
     focusGround.appendChild(bubble);
     focusName.textContent = $(".slot__name", slot).textContent;
-    lastTrigger = $('[data-act="expand"]', slot);
+    lastTrigger = $('[data-act="settings"]', slot);
+    syncFocusTune();
     focus.dataset.open = "true";
     document.body.style.overflow = "hidden";
   }
@@ -3026,6 +3056,30 @@ input[type=range]::-moz-range-thumb{
     document.body.style.overflow = "";
     if (lastTrigger) lastTrigger.focus();
   }
+
+  /* ---------- the gear's type knobs ---------- */
+  /* these sliders hold no state of their own: each one writes through to
+     its console twin, so the bubbles, the readouts and the PNG export all
+     keep reading one value */
+  const fSize = $("#fSizeRange"), fLh = $("#fLhRange"), fTrack = $("#fTrackRange");
+
+  function syncFocusTune() {
+    fSize.value = sizeRange.value;
+    fLh.value = lhRange.value;
+    fTrack.value = trackRange.value;
+    $("#fSizeVal").textContent = $("#sizeVal").textContent;
+    $("#fLhVal").textContent = $("#lhVal").textContent;
+    $("#fTrackVal").textContent = $("#trackVal").textContent;
+  }
+
+  [[fSize, sizeRange], [fLh, lhRange], [fTrack, trackRange]].forEach(pair => {
+    pair[0].addEventListener("input", () => {
+      pair[1].value = pair[0].value;
+      pair[1].dispatchEvent(new Event("input"));
+    });
+  });
+
+  $("#fResetType").addEventListener("click", () => $("#resetType").click());
 
   $("#focusPng").addEventListener("click", e => {
     if (focusSlot) window.ReplyStudio.exportSlot(focusSlot, e.currentTarget);
