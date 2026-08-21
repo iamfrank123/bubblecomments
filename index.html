@@ -1079,6 +1079,11 @@ input[type=range]::-moz-range-thumb{
 .tool--type[data-act="font-prev"]{border-top-right-radius:3px;border-bottom-right-radius:3px;}
 .tool--type[data-act="font-next"]{border-top-left-radius:3px;border-bottom-left-radius:3px;margin-right:5px;}
 .tool--type:hover{background:var(--ink);color:var(--ground);border-color:var(--ink);}
+/* the size steppers are a second pair — same grouping, own margin */
+.tool--size{background:var(--panel-2);}
+.tool--size[data-act="size-down"]{border-top-right-radius:3px;border-bottom-right-radius:3px;}
+.tool--size[data-act="size-up"]{border-top-left-radius:3px;border-bottom-left-radius:3px;margin-right:5px;}
+.tool--size:hover{background:var(--ink);color:var(--ground);border-color:var(--ink);}
 </style>
 
 <header class="topbar">
@@ -2575,12 +2580,16 @@ input[type=range]::-moz-range-thumb{
   const PNG_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 10.5 12 15l4.5-4.5M4 19h16"/></svg>';
   const PREV_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg>';
   const NEXT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg>';
+  const MINUS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 12h12"/></svg>';
+  const PLUS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>';
 
   /* one definition, used by both the engine and hand-built branches */
   const TOOLS =
     '<span class="slot__tools">' +
       '<button class="tool tool--type" type="button" data-act="font-prev" title="Previous typeface (applies to every bubble)" aria-label="Previous typeface">' + PREV_ICON + '</button>' +
       '<button class="tool tool--type" type="button" data-act="font-next" title="Next typeface (applies to every bubble)" aria-label="Next typeface">' + NEXT_ICON + '</button>' +
+      '<button class="tool tool--size" type="button" data-act="size-down" title="Smaller text (applies to every bubble)" aria-label="Smaller text">' + MINUS_ICON + '</button>' +
+      '<button class="tool tool--size" type="button" data-act="size-up" title="Larger text (applies to every bubble)" aria-label="Larger text">' + PLUS_ICON + '</button>' +
       '<button class="tool" type="button" data-act="lock" aria-pressed="false" title="Lock this bubble’s own text">' + LOCK_ICON + '</button>' +
       '<button class="tool" type="button" data-act="expand" title="Expand for screenshot">' + EXPAND_ICON + '</button>' +
       '<button class="tool" type="button" data-act="png" title="Download PNG">' + PNG_ICON + '</button>' +
@@ -2951,6 +2960,23 @@ input[type=range]::-moz-range-thumb{
     if (toast) toast(opts[i].value ? "Typeface: " + opts[i].textContent : "Typeface: each skin's own");
   }
 
+  /* ---------- text size stepping straight from a bubble ---------- */
+  /* same deal as the arrows: drive the sidebar slider so the readout,
+     the live bubbles and the PNG export all read one value */
+  const SIZE_STEP = 1;
+
+  function stepSize(dir) {
+    const r = $("#sizeRange");
+    const min = parseFloat(r.min), max = parseFloat(r.max);
+    const cur = parseFloat(root.style.getPropertyValue("--ui-size")) || parseFloat(r.value) || 17;
+    const next = Math.min(max, Math.max(min, cur + dir * SIZE_STEP));
+    if (next === cur) return;
+    r.value = String(next);
+    r.dispatchEvent(new Event("input"));
+    const toast = window.ReplyStudio && window.ReplyStudio.toast;
+    if (toast) toast("Text size: " + next.toFixed(1) + " px");
+  }
+
   /* ---------- slot tools ---------- */
   grid.addEventListener("click", e => {
     const btn = e.target.closest(".tool");
@@ -2958,6 +2984,8 @@ input[type=range]::-moz-range-thumb{
     const slot = btn.closest(".slot");
     if (btn.dataset.act === "font-prev") { stepFont(-1); return; }
     if (btn.dataset.act === "font-next") { stepFont(1); return; }
+    if (btn.dataset.act === "size-down") { stepSize(-1); return; }
+    if (btn.dataset.act === "size-up") { stepSize(1); return; }
     if (btn.dataset.act === "lock") {
       const on = slot.dataset.locked !== "true";
       slot.dataset.locked = String(on);
