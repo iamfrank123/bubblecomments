@@ -80,6 +80,8 @@
   --ui-hue:0deg;
   --ui-sat:1;
   --ui-stroke:0;
+  /* one width for every bubble — the PNG export reads the same number */
+  --card-w:380px;
 }
 
 *{box-sizing:border-box;}
@@ -347,13 +349,14 @@ input[type=range]::-moz-range-thumb{
 .grid{
   display:grid;
   /* min() keeps the track from forcing overflow on very narrow screens */
-  grid-template-columns:repeat(auto-fill,minmax(min(292px,100%),1fr));
+  grid-template-columns:repeat(auto-fill,minmax(min(var(--card-w),100%),1fr));
   gap:44px 22px;
   align-items:start;
+  justify-items:center;
 }
 
 /* ---------------- specimen slot ---------------- */
-.slot{display:flex;flex-direction:column;gap:9px;}
+.slot{display:flex;flex-direction:column;gap:9px;width:min(var(--card-w),100%);}
 .slot__bar{display:flex;align-items:center;gap:8px;padding:0 3px;}
 .slot__name{
   font-family:"DM Mono",ui-monospace,monospace;
@@ -376,7 +379,39 @@ input[type=range]::-moz-range-thumb{
 .tool:hover{color:var(--ink);border-color:var(--line-2);}
 .tool[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink);}
 .tool svg{width:13px;height:13px;}
-.slot__mount{display:flex;}
+.slot__mount{display:flex;position:relative;}
+
+/* ---------------- width grip ----------------
+   sits on the card's right edge; drag it sideways to stretch every
+   bubble at once. right-drag anywhere on a bubble does the same. */
+.slot__grip{
+  position:absolute;top:50%;right:-13px;transform:translateY(-50%);
+  width:22px;height:64px;z-index:6;
+  display:grid;place-items:center;
+  cursor:ew-resize;touch-action:none;-webkit-touch-callout:none;
+  opacity:0;transition:opacity .18s;
+}
+.slot__grip::before{
+  content:"";width:8px;height:44px;border-radius:99px;
+  background:var(--panel);border:1px solid var(--line-2);
+  box-shadow:var(--shadow-sm);
+}
+.slot__grip:hover::before,.slot__grip[data-on="true"]::before{
+  background:var(--accent);border-color:var(--accent);
+}
+.slot:hover .slot__grip,.slot:focus-within .slot__grip,.slot__grip[data-on="true"]{opacity:1;}
+/* touch devices never hover — keep the grip reachable, and fat enough */
+@media (hover:none){
+  .slot__grip{opacity:1;width:30px;height:76px;right:-16px;}
+  .slot__grip::before{width:10px;height:52px;}
+}
+.focus__grip{opacity:1;right:6px;}
+:root[data-focus="1"] .slot__grip:not(.focus__grip){opacity:0;pointer-events:none;}
+
+/* while a drag runs, nothing else on the page may select or hover */
+:root[data-resizing="1"]{cursor:ew-resize;}
+:root[data-resizing="1"] *{user-select:none!important;-webkit-user-select:none!important;}
+
 
 /* ============================================================
    BUBBLE — shared skeleton. Every skin overrides nearly all of it.
@@ -1009,11 +1044,13 @@ input[type=range]::-moz-range-thumb{
 .focus[data-open="true"]{display:grid;}
 .focus__scrim{position:absolute;inset:0;background:rgba(8,6,5,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
 .focus__panel{
-  position:relative;z-index:2;width:min(560px,100%);
+  position:relative;z-index:2;
+  width:min(100%,max(560px,calc(var(--card-w) + 120px)));
   display:flex;flex-direction:column;gap:14px;
   max-height:calc(100vh - 52px);overflow-y:auto;
 }
 .focus__ground{
+  position:relative;
   border-radius:20px;padding:52px 40px;display:grid;place-items:center;
   background:var(--sheet);
   box-shadow:0 30px 70px rgba(0,0,0,.45);
@@ -1031,7 +1068,7 @@ input[type=range]::-moz-range-thumb{
 }
 .focus__ground[data-ground="dark"]{background:#0E0C0B;background-image:none;}
 .focus__ground[data-ground="light"]{background:#FFFFFF;background-image:none;}
-.focus__ground .bubble{max-width:400px;}
+.focus__ground .bubble{width:min(var(--card-w),100%);max-width:100%;}
 .focus__bar{
   display:flex;align-items:center;gap:9px;flex-wrap:wrap;
   background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;
@@ -1054,7 +1091,7 @@ input[type=range]::-moz-range-thumb{
   background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 14px;
   box-shadow:var(--shadow-md);
 }
-.focus__tune .ghost-btn{grid-column:1/-1;}
+.focus__tune .ghost-btn,.focus__tune .slider--wide{grid-column:1/-1;}
 @media (max-width:560px){.focus__tune{grid-template-columns:1fr;}}
 .sw-light{background:#fff;}
 .sw-dark{background:#0E0C0B;}
@@ -1215,6 +1252,16 @@ input[type=range]::-moz-range-thumb{
     </div>
 
     <div class="group">
+      <h3 class="group__title">Layout</h3>
+      <div class="slider">
+        <div class="slider__top"><span>Bubble width</span><span class="slider__val" id="widthVal">380 px</span></div>
+        <input type="range" id="widthRange" min="240" max="680" step="2" value="380">
+      </div>
+      <button class="ghost-btn" id="resetWidth" type="button">Back to the standard width</button>
+      <div class="generate__hint">Drag a bubble's right edge — or right-drag any bubble — to stretch them all. The PNG saves at this width.</div>
+    </div>
+
+    <div class="group">
       <h3 class="group__title">Color</h3>
       <div class="slider">
         <div class="slider__top"><span>Hue shift</span><span class="slider__val" id="hueVal">0°</span></div>
@@ -1264,7 +1311,7 @@ input[type=range]::-moz-range-thumb{
     <div class="stage__head">
       <div>
         <h2>One comment, seventy ways</h2>
-        <p>Click any comment to edit it in place. Lock a bubble to give it its own line, download any of them as a PNG, or expand one onto a clean ground to screenshot. Fifteen load at a time.</p>
+        <p>Click any comment to edit it in place. Drag a bubble's right edge — or right-drag any bubble — to stretch every bubble wider or narrower; the PNG saves at that width. Lock a bubble to give it its own line, or expand one onto a clean ground to screenshot. Fifteen load at a time.</p>
       </div>
     </div>
     <div class="grid" id="grid"></div>
@@ -1298,7 +1345,9 @@ input[type=range]::-moz-range-thumb{
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
-    <div class="focus__ground" id="focusGround" data-ground="light"></div>
+    <div class="focus__ground" id="focusGround" data-ground="light">
+      <span class="slot__grip focus__grip" data-act="grip" title="Drag sideways to stretch every bubble" aria-hidden="true"></span>
+    </div>
     <div class="focus__tune">
       <div class="slider">
         <div class="slider__top"><span>Size</span><span class="slider__val" id="fSizeVal">17.0 px</span></div>
@@ -1311,6 +1360,10 @@ input[type=range]::-moz-range-thumb{
       <div class="slider">
         <div class="slider__top"><span>Tracking</span><span class="slider__val" id="fTrackVal">Auto</span></div>
         <input type="range" id="fTrackRange" min="-0.05" max="0.16" step="0.002" value="0" aria-label="Tracking">
+      </div>
+      <div class="slider slider--wide">
+        <div class="slider__top"><span>Bubble width</span><span class="slider__val" id="fWidthVal">380 px</span></div>
+        <input type="range" id="fWidthRange" min="240" max="680" step="2" value="380" aria-label="Bubble width">
       </div>
       <button class="ghost-btn" id="fResetType" type="button">Back to each skin's own type</button>
     </div>
@@ -2620,6 +2673,10 @@ input[type=range]::-moz-range-thumb{
       '<button class="tool" type="button" data-act="png" title="Download PNG">' + PNG_ICON + '</button>' +
     '</span>';
 
+  const GRIP =
+    '<span class="slot__grip" data-act="grip" title="Drag sideways to stretch every bubble" ' +
+      'aria-hidden="true"></span>';
+
   /* ---------- skin roster ----------
      light and flat first, then the 14 hand-built skins, then the
      gradient set — so the calmest designs are what you land on */
@@ -2665,7 +2722,7 @@ input[type=range]::-moz-range-thumb{
         '<div class="slot__mount">' +
           '<article class="bubble b-gen" data-skin="' + skin.id + '">' +
             '<canvas class="bubble__paint" aria-hidden="true"></canvas>' + inner +
-          '</article>' +
+          '</article>' + GRIP +
         '</div>';
       return slot;
     }
@@ -2699,7 +2756,7 @@ input[type=range]::-moz-range-thumb{
         '<span class="slot__rule"></span>' + TOOLS +
       '</div>' +
       '<div class="slot__mount">' +
-        '<article class="bubble b-' + skin.id + '" data-skin="' + skin.id + '">' + body + tail + '</article>' +
+        '<article class="bubble b-' + skin.id + '" data-skin="' + skin.id + '">' + body + tail + '</article>' + GRIP +
       '</div>';
 
     return slot;
@@ -2838,6 +2895,94 @@ input[type=range]::-moz-range-thumb{
     root.style.setProperty("--ui-tracka", trackRange.value + "em");
     $("#trackVal").textContent = Number(trackRange.value).toFixed(3) + "em";
     syncFocusTune();
+  });
+
+  /* ---------- bubble width ----------
+     one number drives the grid track, the live cards and the PNG export,
+     so a stretched bubble saves exactly as wide as it looks */
+  const widthRange = $("#widthRange");
+  const W_MIN = parseFloat(widthRange.min), W_MAX = parseFloat(widthRange.max);
+  const W_DEFAULT = 380;
+
+  const currentWidth = () =>
+    parseFloat(root.style.getPropertyValue("--card-w")) || W_DEFAULT;
+
+  function setWidth(px, fromSlider) {
+    const w = Math.round(Math.min(W_MAX, Math.max(W_MIN, px)));
+    if (w === currentWidth() && fromSlider) return;
+    root.style.setProperty("--card-w", w + "px");
+    if (!fromSlider) widthRange.value = String(w);
+    $("#widthVal").textContent = w + " px";
+    syncFocusTune();
+    /* the ResizeObserver repaints the engine skins; without it, do it here */
+    if (!ro) repaintAll();
+    const rs = window.ReplyStudio;
+    if (rs && rs.refreshHint) rs.refreshHint();
+  }
+
+  widthRange.addEventListener("input", () => setWidth(parseFloat(widthRange.value), true));
+  $("#resetWidth").addEventListener("click", () => setWidth(W_DEFAULT));
+
+  /* ---------- stretch by dragging ----------
+     the grip on a card's right edge works with mouse or finger; on a mouse
+     the right button drags from anywhere on the bubble. the card is centred
+     in its track, so it grows twice as fast as the pointer moves */
+  let drag = null, movedFar = false, suppressMenu = false;
+
+  function startDrag(e, el) {
+    drag = { id: e.pointerId, x: e.clientX, w: currentWidth(), el: el, btn: e.button };
+    movedFar = false;
+    root.dataset.resizing = "1";
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+  }
+
+  function endDrag(e) {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    try { drag.el.releasePointerCapture(drag.id); } catch (err) {}
+    suppressMenu = movedFar && drag.btn === 2;
+    drag = null;
+    root.dataset.resizing = "0";
+    $$(".slot__grip[data-on]").forEach(g => g.removeAttribute("data-on"));
+    if (movedFar) {
+      const t = window.ReplyStudio && window.ReplyStudio.toast;
+      if (t) t("Bubble width: " + currentWidth() + " px");
+    }
+  }
+
+  document.addEventListener("pointerdown", e => {
+    const grip = e.target.closest && e.target.closest(".slot__grip");
+    if (grip && e.button === 0) {
+      grip.dataset.on = "true";
+      startDrag(e, grip);
+      e.preventDefault();
+      return;
+    }
+    /* right button anywhere on a bubble — including the expanded one */
+    if (e.button === 2 && e.target.closest && e.target.closest(".bubble")) {
+      startDrag(e, e.target.closest(".bubble"));
+      e.preventDefault();
+    }
+  }, true);
+
+  document.addEventListener("pointermove", e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x;
+    if (Math.abs(dx) > 3) movedFar = true;
+    setWidth(drag.w + dx * 2);
+    e.preventDefault();
+  });
+
+  document.addEventListener("pointerup", endDrag);
+  document.addEventListener("pointercancel", endDrag);
+
+  /* a right-drag must not also pop the browser menu — a plain right-click still does */
+  document.addEventListener("contextmenu", e => {
+    if (suppressMenu) { e.preventDefault(); suppressMenu = false; }
+  });
+
+  /* double-tap the grip to go back to the standard width */
+  document.addEventListener("dblclick", e => {
+    if (e.target.closest && e.target.closest(".slot__grip")) setWidth(W_DEFAULT);
   });
 
   $("#resetType").addEventListener("click", () => {
@@ -3043,6 +3188,7 @@ input[type=range]::-moz-range-thumb{
     lastTrigger = $('[data-act="settings"]', slot);
     syncFocusTune();
     focus.dataset.open = "true";
+    root.dataset.focus = "1";
     document.body.style.overflow = "hidden";
   }
 
@@ -3053,6 +3199,7 @@ input[type=range]::-moz-range-thumb{
     }
     parked = null; placeholder = null;
     focus.dataset.open = "false";
+    root.dataset.focus = "0";
     document.body.style.overflow = "";
     if (lastTrigger) lastTrigger.focus();
   }
@@ -3062,17 +3209,20 @@ input[type=range]::-moz-range-thumb{
      its console twin, so the bubbles, the readouts and the PNG export all
      keep reading one value */
   const fSize = $("#fSizeRange"), fLh = $("#fLhRange"), fTrack = $("#fTrackRange");
+  const fWidth = $("#fWidthRange");
 
   function syncFocusTune() {
     fSize.value = sizeRange.value;
     fLh.value = lhRange.value;
     fTrack.value = trackRange.value;
+    fWidth.value = widthRange.value;
     $("#fSizeVal").textContent = $("#sizeVal").textContent;
     $("#fLhVal").textContent = $("#lhVal").textContent;
     $("#fTrackVal").textContent = $("#trackVal").textContent;
+    $("#fWidthVal").textContent = $("#widthVal").textContent;
   }
 
-  [[fSize, sizeRange], [fLh, lhRange], [fTrack, trackRange]].forEach(pair => {
+  [[fSize, sizeRange], [fLh, lhRange], [fTrack, trackRange], [fWidth, widthRange]].forEach(pair => {
     pair[0].addEventListener("input", () => {
       pair[1].value = pair[0].value;
       pair[1].dispatchEvent(new Event("input"));
@@ -3133,6 +3283,7 @@ input[type=range]::-moz-range-thumb{
   root.dataset.sizeFixed = "1";
   root.dataset.lhFixed = "0";
   root.dataset.trackFixed = "0";
+  setWidth(W_DEFAULT);
   reveal(PAGE);
 })();
 </script>
@@ -3148,7 +3299,11 @@ input[type=range]::-moz-range-thumb{
 (() => {
   "use strict";
 
-  const CARD_W = 380;
+  /* the card width is live — the width knob and the drag gesture write it
+     onto :root, and the PNG is rendered at exactly that width */
+  const CARD_W_DEFAULT = 380;
+  const cardW = () =>
+    parseFloat(document.documentElement.style.getPropertyValue("--card-w")) || CARD_W_DEFAULT;
   const PAD    = 84;
   const TAU    = Math.PI * 2;
 
@@ -3937,6 +4092,7 @@ input[type=range]::-moz-range-thumb{
     const sp = S[slot.dataset.skin] || (window.RS && window.RS.skin(slot.dataset.skin));
     if (!sp) throw new Error("no painter for " + slot.dataset.skin);
     const k = knobs();
+    const CARD_W = cardW();
     /* while a bubble is expanded its node lives in the overlay, not the slot */
     const bubble = slot.querySelector(".bubble") ||
                    document.querySelector('.focus__ground .bubble.b-' + slot.dataset.skin);
@@ -4062,7 +4218,7 @@ input[type=range]::-moz-range-thumb{
   const hint = document.getElementById("exportHint");
 
   function refreshHint() {
-    const px = Math.round((CARD_W + 32) * Number(scaleSel.value));
+    const px = Math.round((cardW() + 32) * Number(scaleSel.value));
     const bgName = bgChoice === "transparent" ? "Transparent" : (bgChoice === "#FFFFFF" ? "White" : "Black");
     hint.textContent = bgName + " PNG · about " + px + " px wide";
   }
@@ -4097,6 +4253,6 @@ input[type=range]::-moz-range-thumb{
     }
   }
 
-  window.ReplyStudio = { exportSlot: exportSlot, toast: say };
+  window.ReplyStudio = { exportSlot: exportSlot, toast: say, refreshHint: refreshHint };
 })();
 </script>
