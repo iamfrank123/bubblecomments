@@ -496,6 +496,20 @@ input[type=range]::-moz-range-thumb{
 :root[data-case="upper"] .bubble__text{text-transform:uppercase;}
 :root[data-case="title"] .bubble__text{text-transform:capitalize;}
 :root[data-italic="1"] .bubble__text{font-style:italic;}
+/* the outline control is its own authority — a skin's own stroke is only a
+   default, and most skins ship none, so the knob has to set both numbers
+   itself or it looks broken on the 64 skins that never asked for one */
+:root[data-outline="1"] .bubble__text{
+  -webkit-text-stroke-width:var(--tx-out-w,0px)!important;
+  -webkit-text-stroke-color:var(--tx-out-c,#000000)!important;
+}
+/* a preset carries its own stroke on its own two properties, so choosing
+   one never reaches over and moves the Text outline knobs. there is only
+   one stroke to paint, so the knob wins whenever it is turned up at all */
+:root[data-outline="0"][data-preset-out="1"] .bubble__text{
+  -webkit-text-stroke-width:var(--tx-pre-w,0px)!important;
+  -webkit-text-stroke-color:var(--tx-pre-c,#000000)!important;
+}
 
 /* locked-text marker — on the mount, so skins keep their own ::after free */
 .slot[data-locked="true"] .slot__mount{
@@ -1131,6 +1145,120 @@ input[type=range]::-moz-range-thumb{
 .tool--size[data-act="size-down"]{border-top-right-radius:3px;border-bottom-right-radius:3px;}
 .tool--size[data-act="size-up"]{border-top-left-radius:3px;border-bottom-left-radius:3px;margin-right:5px;}
 .tool--size:hover{background:var(--ink);color:var(--ground);border-color:var(--ink);}
+
+
+/* ============================================================
+   PRESET STYLE — the CapCut row. one tap sets the outline, the
+   outer border and the shadow together
+   ============================================================ */
+:root[data-sh="1"] .bubble__text{text-shadow:var(--tx-sh)!important;}
+
+.presets{display:flex;flex-wrap:wrap;gap:8px;}
+.pchip{
+  width:46px;height:46px;flex:none;padding:0;cursor:pointer;
+  display:grid;place-items:center;
+  border-radius:11px;border:1px solid rgba(255,255,255,.14);
+  /* the swatches stay dark in both themes: every preset is drawn for
+     white type, and a pale chip would hide the very effect it shows */
+  background:#3A3A3C;color:#FFFFFF;
+  transition:transform .14s,box-shadow .14s;
+}
+.pchip:hover{transform:translateY(-1px);}
+.pchip[aria-pressed="true"]{box-shadow:0 0 0 2px var(--accent);border-color:transparent;}
+.pchip svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;}
+.pchip__aa{
+  font-family:"Archivo",sans-serif;font-weight:800;font-size:17px;line-height:1;
+  paint-order:stroke fill;
+}
+/* the thumbnails mirror the real presets, scaled to a 46px tile */
+.pchip[data-preset="outline"] .pchip__aa{-webkit-text-stroke:1.4px #000;}
+.pchip[data-preset="border"] .pchip__aa{
+  -webkit-text-stroke:1.1px #000;
+  text-shadow:
+    0 -2.9px 0 #FFF, 1.45px -2.51px 0 #FFF, 2.51px -1.45px 0 #FFF, 2.9px 0 0 #FFF,
+    2.51px 1.45px 0 #FFF, 1.45px 2.51px 0 #FFF, 0 2.9px 0 #FFF, -1.45px 2.51px 0 #FFF,
+    -2.51px 1.45px 0 #FFF, -2.9px 0 0 #FFF, -2.51px -1.45px 0 #FFF, -1.45px -2.51px 0 #FFF;
+}
+.pchip[data-preset="shadow"] .pchip__aa{text-shadow:0 2px 2.5px rgba(0,0,0,.85);}
+.pchip[data-preset="glow"] .pchip__aa{text-shadow:0 0 7px rgba(0,0,0,.98),0 0 3px rgba(0,0,0,.9);}
+/* ============================================================
+   TEXT HIGHLIGHT — per-word colour, gradients, and the dark
+   blurred plate that sits behind the copy so bright words pop
+   ============================================================ */
+
+/* a coloured run. the span carries its own custom properties so one
+   flat span per run is enough — no nesting, ever */
+.bubble__text .hl{
+  color:var(--hl-c,currentColor);
+  -webkit-text-fill-color:var(--hl-c,currentColor);
+}
+/* a gradient run paints through the glyphs instead of behind them */
+.bubble__text .hl[data-g]{
+  background-image:var(--hl-g);
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+}
+
+/* the plate. it lives behind the text inside the text element's own
+   stacking context, so it covers the bubble art but never the glyphs */
+.bubble__text::after{
+  content:"";
+  position:absolute;z-index:-1;
+  inset:calc(var(--tx-plate-pad,10px) * -1) calc(var(--tx-plate-pad,10px) * -1.4);
+  border-radius:var(--tx-plate-r,16px);
+  background:var(--tx-plate-col,#0B0A0A);
+  opacity:var(--tx-plate-a,0);
+  filter:blur(var(--tx-plate-blur,14px));
+  pointer-events:none;
+  transition:opacity .16s;
+}
+
+/* ---- console + gear controls ---- */
+.swatches{
+  display:flex;flex-wrap:wrap;gap:7px;align-items:center;
+}
+.swatches .chip{
+  width:26px;height:26px;border-radius:8px;padding:0;
+  border:1px solid var(--line-2);cursor:pointer;
+  transition:transform .14s,box-shadow .14s;
+}
+.swatches .chip:hover{transform:translateY(-1px);box-shadow:var(--shadow-md);}
+.swatches .chip[aria-pressed="true"]{box-shadow:0 0 0 2px var(--accent);}
+.chip--none{
+  background:var(--panel-2);
+  background-image:linear-gradient(45deg,transparent 45%,var(--accent) 45%,var(--accent) 55%,transparent 55%);
+}
+/* the native picker, dressed to match the chips */
+.chip--pick{
+  position:relative;overflow:hidden;
+  -webkit-appearance:none;appearance:none;background:none;
+}
+.chip--pick::-webkit-color-swatch-wrapper{padding:0;}
+.chip--pick::-webkit-color-swatch{border:none;border-radius:7px;}
+.chip--pick::-moz-color-swatch{border:none;border-radius:7px;}
+
+.hl-hint{font-size:11.5px;line-height:1.45;color:var(--ink-3);margin-top:-2px;}
+
+/* ---- the popover that follows a selection ---- */
+.hlbar{
+  position:fixed;z-index:200;
+  display:none;align-items:center;gap:7px;
+  padding:8px 9px;border-radius:13px;
+  background:var(--panel);border:1px solid var(--line-2);
+  box-shadow:var(--shadow-md);
+  transform:translate(-50%,-100%);
+}
+.hlbar[data-open="true"]{display:flex;}
+.hlbar__sep{width:1px;height:22px;background:var(--line-2);flex:none;}
+.hlbar .chip{width:22px;height:22px;border-radius:7px;}
+.hlbar__txt{
+  font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ink-3);padding-right:2px;white-space:nowrap;
+}
+@media (max-width:560px){
+  .hlbar__txt{display:none;}
+  .hlbar{padding:7px;gap:5px;}
+}
 </style>
 
 <header class="topbar">
@@ -1238,17 +1366,85 @@ input[type=range]::-moz-range-thumb{
         </div>
       </div>
       <div class="field">
+        <label>Preset style</label>
+        <div class="presets" id="presetRow" role="group" aria-label="Preset style"></div>
+      </div>
+      <div class="field">
         <label>Text outline</label>
         <div class="seg" id="strokeSeg" role="group" aria-label="Text outline">
           <button type="button" data-stroke="0" aria-pressed="true">Off</button>
-          <button type="button" data-stroke="1" aria-pressed="false">Soft</button>
-          <button type="button" data-stroke="1.8" aria-pressed="false">Bold</button>
+          <button type="button" data-stroke="1.6" aria-pressed="false">Soft</button>
+          <button type="button" data-stroke="3.2" aria-pressed="false">Bold</button>
+        </div>
+      </div>
+      <div class="slider">
+        <div class="slider__top"><span>Outline width</span><span class="slider__val" id="outWVal">Off</span></div>
+        <input type="range" id="outWRange" min="0" max="9" step="0.2" value="0" aria-label="Outline width">
+      </div>
+      <div class="field">
+        <label for="outCol">Outline colour</label>
+        <div class="swatches" id="outSwatches" role="group" aria-label="Outline colour">
+          <button class="chip" type="button" data-out="#000000" title="Black" aria-label="Black outline" style="background:#000000"></button>
+          <button class="chip" type="button" data-out="#FFFFFF" title="White" aria-label="White outline" style="background:#FFFFFF"></button>
+          <input class="chip chip--pick" type="color" id="outCol" value="#000000" title="Any outline colour" aria-label="Pick any outline colour">
+          <span class="hl-hint" style="margin:0">Black reads like TikTok captions.</span>
         </div>
       </div>
       <button class="switch" id="italicSw" type="button" aria-pressed="false">
         <span class="switch__label"><b>Italic</b>Slant the comment text</span>
         <span class="switch__track"></span>
       </button>
+    </div>
+
+    <div class="group">
+      <h3 class="group__title">Text highlight</h3>
+      <div class="field">
+        <label>Color specific text</label>
+        <div class="swatches" id="hlSwatches" role="group" aria-label="Highlight colour">
+          <button class="chip chip--none" type="button" data-hl="none" title="Clear the highlight" aria-label="Clear the highlight"></button>
+          <button class="chip" type="button" data-hl="#FFD23F" style="background:#FFD23F" title="Sun yellow" aria-label="Sun yellow"></button>
+          <button class="chip" type="button" data-hl="#FF3B5C" title="Hot red" aria-label="Hot red" style="background:#FF3B5C"></button>
+          <button class="chip" type="button" data-hl="#2BE08A" title="Pop green" aria-label="Pop green" style="background:#2BE08A"></button>
+          <button class="chip" type="button" data-hl="#3AC8FF" title="Sky blue" aria-label="Sky blue" style="background:#3AC8FF"></button>
+          <button class="chip" type="button" data-hl="#B45CFF" title="Violet" aria-label="Violet" style="background:#B45CFF"></button>
+          <button class="chip" type="button" data-hl="#FF7A1F" title="Orange" aria-label="Orange" style="background:#FF7A1F"></button>
+          <button class="chip" type="button" data-hl="#0E0C0B" title="Ink black" aria-label="Ink black" style="background:#0E0C0B"></button>
+          <button class="chip" type="button" data-hl="#FFFFFF" title="Pure white" aria-label="Pure white" style="background:#FFFFFF"></button>
+          <input class="chip chip--pick" type="color" id="hlPick" value="#FFD23F" title="Any colour you like" aria-label="Pick any highlight colour">
+        </div>
+        <div class="hl-hint">Select a word or phrase in any bubble, then pick a colour. The picker previews live.</div>
+      </div>
+      <div class="field">
+        <label>Gradient</label>
+        <div class="swatches" id="hlGrads" role="group" aria-label="Highlight gradient">
+          <button class="chip" type="button" data-g="#FFD23F|#FF7A1F|100" title="Sunset" aria-label="Sunset gradient" style="background:linear-gradient(100deg,#FFD23F,#FF7A1F)"></button>
+          <button class="chip" type="button" data-g="#FF5E7A|#B45CFF|100" title="Bubblegum" aria-label="Bubblegum gradient" style="background:linear-gradient(100deg,#FF5E7A,#B45CFF)"></button>
+          <button class="chip" type="button" data-g="#3AC8FF|#0F5FFF|100" title="Deep sky" aria-label="Deep sky gradient" style="background:linear-gradient(100deg,#3AC8FF,#0F5FFF)"></button>
+          <button class="chip" type="button" data-g="#2BE08A|#0F9E7A|100" title="Mint" aria-label="Mint gradient" style="background:linear-gradient(100deg,#2BE08A,#0F9E7A)"></button>
+          <button class="chip" type="button" data-g="#F7F3EA|#9AA3B2|100" title="Chrome" aria-label="Chrome gradient" style="background:linear-gradient(100deg,#F7F3EA,#9AA3B2)"></button>
+        </div>
+      </div>
+      <button class="ghost-btn" id="hlClearAll" type="button">Clear every highlight</button>
+
+      <div class="field">
+        <label for="plateCol">Dark plate behind the text</label>
+        <div class="swatches">
+          <input class="chip chip--pick" type="color" id="plateCol" value="#0B0A0A" title="Plate colour" aria-label="Plate colour">
+          <span class="hl-hint" style="margin:0">Blurs in behind the copy so bright words carry.</span>
+        </div>
+      </div>
+      <div class="slider">
+        <div class="slider__top"><span>Plate strength</span><span class="slider__val" id="plateAVal">Off</span></div>
+        <input type="range" id="plateARange" min="0" max="100" step="1" value="0" aria-label="Plate strength">
+      </div>
+      <div class="slider">
+        <div class="slider__top"><span>Bluriness</span><span class="slider__val" id="plateBVal">14 px</span></div>
+        <input type="range" id="plateBRange" min="0" max="46" step="1" value="14" aria-label="Plate bluriness">
+      </div>
+      <div class="slider">
+        <div class="slider__top"><span>Plate spread</span><span class="slider__val" id="platePVal">10 px</span></div>
+        <input type="range" id="platePRange" min="0" max="40" step="1" value="10" aria-label="Plate spread">
+      </div>
     </div>
 
     <div class="group">
@@ -1365,9 +1561,84 @@ input[type=range]::-moz-range-thumb{
         <div class="slider__top"><span>Bubble width</span><span class="slider__val" id="fWidthVal">380 px</span></div>
         <input type="range" id="fWidthRange" min="240" max="680" step="2" value="380" aria-label="Bubble width">
       </div>
+      <div class="field slider--wide">
+        <label>Preset style</label>
+        <div class="presets" id="fPresetRow" role="group" aria-label="Preset style"></div>
+      </div>
+      <div class="field slider--wide">
+        <label>Text outline</label>
+        <div class="seg" id="fStrokeSeg" role="group" aria-label="Text outline">
+          <button type="button" data-stroke="0" aria-pressed="true">Off</button>
+          <button type="button" data-stroke="1.6" aria-pressed="false">Soft</button>
+          <button type="button" data-stroke="3.2" aria-pressed="false">Bold</button>
+        </div>
+      </div>
+      <div class="slider">
+        <div class="slider__top"><span>Outline width</span><span class="slider__val" id="fOutWVal">Off</span></div>
+        <input type="range" id="fOutWRange" min="0" max="9" step="0.2" value="0" aria-label="Outline width">
+      </div>
+      <div class="field">
+        <label for="fOutCol">Outline colour</label>
+        <div class="swatches" id="fOutSwatches" role="group" aria-label="Outline colour">
+          <button class="chip" type="button" data-out="#000000" title="Black" aria-label="Black outline" style="background:#000000"></button>
+          <button class="chip" type="button" data-out="#FFFFFF" title="White" aria-label="White outline" style="background:#FFFFFF"></button>
+          <input class="chip chip--pick" type="color" id="fOutCol" value="#000000" aria-label="Pick any outline colour">
+        </div>
+      </div>
+      <div class="field slider--wide">
+        <label>Color specific text</label>
+        <div class="swatches" id="fHlSwatches" role="group" aria-label="Highlight colour">
+          <button class="chip chip--none" type="button" data-hl="none" title="Clear the highlight" aria-label="Clear the highlight"></button>
+          <button class="chip" type="button" data-hl="#FFD23F" title="Sun yellow" aria-label="Sun yellow" style="background:#FFD23F"></button>
+          <button class="chip" type="button" data-hl="#FF3B5C" title="Hot red" aria-label="Hot red" style="background:#FF3B5C"></button>
+          <button class="chip" type="button" data-hl="#2BE08A" title="Pop green" aria-label="Pop green" style="background:#2BE08A"></button>
+          <button class="chip" type="button" data-hl="#3AC8FF" title="Sky blue" aria-label="Sky blue" style="background:#3AC8FF"></button>
+          <button class="chip" type="button" data-hl="#B45CFF" title="Violet" aria-label="Violet" style="background:#B45CFF"></button>
+          <button class="chip" type="button" data-hl="#FF7A1F" title="Orange" aria-label="Orange" style="background:#FF7A1F"></button>
+          <button class="chip" type="button" data-hl="#0E0C0B" title="Ink black" aria-label="Ink black" style="background:#0E0C0B"></button>
+          <button class="chip" type="button" data-hl="#FFFFFF" title="Pure white" aria-label="Pure white" style="background:#FFFFFF"></button>
+          <input class="chip chip--pick" type="color" id="fHlPick" value="#FFD23F" title="Any colour you like" aria-label="Pick any highlight colour">
+          <span class="hlbar__sep"></span>
+          <button class="chip" type="button" data-g="#FFD23F|#FF7A1F|100" title="Sunset" aria-label="Sunset gradient" style="background:linear-gradient(100deg,#FFD23F,#FF7A1F)"></button>
+          <button class="chip" type="button" data-g="#FF5E7A|#B45CFF|100" title="Bubblegum" aria-label="Bubblegum gradient" style="background:linear-gradient(100deg,#FF5E7A,#B45CFF)"></button>
+          <button class="chip" type="button" data-g="#3AC8FF|#0F5FFF|100" title="Deep sky" aria-label="Deep sky gradient" style="background:linear-gradient(100deg,#3AC8FF,#0F5FFF)"></button>
+          <button class="chip" type="button" data-g="#2BE08A|#0F9E7A|100" title="Mint" aria-label="Mint gradient" style="background:linear-gradient(100deg,#2BE08A,#0F9E7A)"></button>
+        </div>
+        <div class="hl-hint">Select a word in the bubble above, then pick a colour.</div>
+      </div>
+      <div class="slider">
+        <div class="slider__top"><span>Plate strength</span><span class="slider__val" id="fPlateAVal">Off</span></div>
+        <input type="range" id="fPlateARange" min="0" max="100" step="1" value="0" aria-label="Plate strength">
+      </div>
+      <div class="slider">
+        <div class="slider__top"><span>Bluriness</span><span class="slider__val" id="fPlateBVal">14 px</span></div>
+        <input type="range" id="fPlateBRange" min="0" max="46" step="1" value="14" aria-label="Plate bluriness">
+      </div>
+      <div class="field">
+        <label for="fPlateCol">Plate colour</label>
+        <div class="swatches"><input class="chip chip--pick" type="color" id="fPlateCol" value="#0B0A0A" aria-label="Plate colour"></div>
+      </div>
       <button class="ghost-btn" id="fResetType" type="button">Back to each skin's own type</button>
     </div>
   </div>
+</div>
+
+<!-- follows a text selection inside any bubble -->
+<div class="hlbar" id="hlbar" data-open="false" role="toolbar" aria-label="Colour the selected text">
+  <span class="hlbar__txt">Colour</span>
+  <button class="chip chip--none" type="button" data-hl="none" title="Clear the highlight" aria-label="Clear the highlight"></button>
+  <button class="chip" type="button" data-hl="#FFD23F" title="Sun yellow" aria-label="Sun yellow" style="background:#FFD23F"></button>
+  <button class="chip" type="button" data-hl="#FF3B5C" title="Hot red" aria-label="Hot red" style="background:#FF3B5C"></button>
+  <button class="chip" type="button" data-hl="#2BE08A" title="Pop green" aria-label="Pop green" style="background:#2BE08A"></button>
+  <button class="chip" type="button" data-hl="#3AC8FF" title="Sky blue" aria-label="Sky blue" style="background:#3AC8FF"></button>
+  <button class="chip" type="button" data-hl="#B45CFF" title="Violet" aria-label="Violet" style="background:#B45CFF"></button>
+  <button class="chip" type="button" data-hl="#0E0C0B" title="Ink black" aria-label="Ink black" style="background:#0E0C0B"></button>
+  <button class="chip" type="button" data-hl="#FFFFFF" title="Pure white" aria-label="Pure white" style="background:#FFFFFF"></button>
+  <input class="chip chip--pick" type="color" id="hlbarPick" value="#FFD23F" title="Any colour you like" aria-label="Pick any highlight colour">
+  <span class="hlbar__sep"></span>
+  <button class="chip" type="button" data-g="#FFD23F|#FF7A1F|100" title="Sunset" aria-label="Sunset gradient" style="background:linear-gradient(100deg,#FFD23F,#FF7A1F)"></button>
+  <button class="chip" type="button" data-g="#FF5E7A|#B45CFF|100" title="Bubblegum" aria-label="Bubblegum gradient" style="background:linear-gradient(100deg,#FF5E7A,#B45CFF)"></button>
+  <button class="chip" type="button" data-g="#3AC8FF|#0F5FFF|100" title="Deep sky" aria-label="Deep sky gradient" style="background:linear-gradient(100deg,#3AC8FF,#0F5FFF)"></button>
 </div>
 
 <script>
@@ -2836,15 +3107,115 @@ input[type=range]::-moz-range-thumb{
     $$(".bubble__avatar").forEach(el => { el.textContent = initial; });
   }
 
-  function setText(value, exceptEl) {
+  /* ---------- rich text ----------
+     the comment is a plain string plus a list of colour marks held in
+     character offsets. the DOM carries one flat span per mark — never
+     nested — so reading marks back after typing is a straight walk */
+  const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const sameSpec = (a, b) => (a.c || "") === (b.c || "") && (a.g || "") === (b.g || "");
+
+  /* a gradient mark is stored as "from|to|angle" so the PNG renderer can
+     rebuild the same ramp without a lookup table */
+  function gradCss(g) {
+    const p = String(g).split("|");
+    return "linear-gradient(" + (p[2] || 100) + "deg," + p[0] + "," + (p[1] || p[0]) + ")";
+  }
+
+  function markHtml(txt, m) {
+    if (m.g) {
+      return '<span class="hl" data-g="' + m.g + '" style="--hl-g:' + gradCss(m.g) + '">' + esc(txt) + "</span>";
+    }
+    return '<span class="hl" data-c="' + m.c + '" style="--hl-c:' + m.c + '">' + esc(txt) + "</span>";
+  }
+
+  /* drop empties, sort, and fuse runs that carry the same colour */
+  function tidy(marks) {
+    const out = [];
+    marks.filter(m => m.e > m.s).sort((a, b) => a.s - b.s).forEach(m => {
+      const last = out[out.length - 1];
+      if (last && last.e === m.s && sameSpec(last, m)) last.e = m.e;
+      else out.push(m);
+    });
+    return out;
+  }
+
+  function readMarks(el) {
+    const marks = [];
+    let text = "";
+    (function walk(node, spec) {
+      Array.prototype.forEach.call(node.childNodes, ch => {
+        if (ch.nodeType === 3) {
+          const t = ch.nodeValue;
+          if (!t) return;
+          if (spec) marks.push({ s: text.length, e: text.length + t.length, c: spec.c, g: spec.g });
+          text += t;
+          return;
+        }
+        if (ch.nodeType !== 1) return;
+        if (ch.tagName === "BR") { text += " "; return; }
+        let s = spec;
+        if (ch.classList && ch.classList.contains("hl")) {
+          const g = ch.getAttribute("data-g"), c = ch.getAttribute("data-c");
+          s = (g || c) ? { c: c || "", g: g || "" } : null;
+        }
+        walk(ch, s);
+      });
+    })(el, null);
+    return { text: text, marks: tidy(marks) };
+  }
+
+  function renderRich(text, marks) {
+    let out = "", i = 0;
+    tidy(marks).forEach(m => {
+      const s = Math.max(i, Math.min(m.s, text.length));
+      const e = Math.max(s, Math.min(m.e, text.length));
+      if (e <= s) return;
+      if (s > i) out += esc(text.slice(i, s));
+      out += markHtml(text.slice(s, e), m);
+      i = e;
+    });
+    out += esc(text.slice(i));
+    return out;
+  }
+
+  /* the one copy every bubble mirrors */
+  const rich = { text: DEFAULT_TEXT, marks: [] };
+
+  /* editing the sidebar textarea rewrites the string under the marks —
+     re-find each coloured run by its own words so a highlight survives
+     a typo fix somewhere else in the sentence */
+  function reanchor(marks, oldText, newText) {
+    if (oldText === newText) return marks;
+    const out = [];
+    marks.forEach(m => {
+      const frag = oldText.slice(m.s, m.e);
+      if (!frag.trim()) return;
+      let i = newText.indexOf(frag, Math.max(0, m.s - 12));
+      if (i < 0) i = newText.indexOf(frag);
+      if (i < 0) return;
+      out.push({ s: i, e: i + frag.length, c: m.c, g: m.g });
+    });
+    return tidy(out);
+  }
+
+  function paintRich(exceptEl) {
+    const html = renderRich(rich.text, rich.marks);
     $$(".slot").forEach(slot => {
       if (slot.dataset.locked === "true") return;
       /* an expanded bubble lives in the overlay, not in its slot */
       const el = $(".bubble__text", slot) ||
                  $('.focus__ground .bubble[data-skin="' + slot.dataset.skin + '"] .bubble__text');
       if (!el || el === exceptEl) return;
-      if (el.textContent !== value) el.textContent = value;
+      if (el.innerHTML !== html) el.innerHTML = html;
     });
+  }
+
+  /* plain-text entry point — keeps the marks pinned to their words */
+  function setText(value, exceptEl) {
+    rich.marks = reanchor(rich.marks, rich.text, value);
+    rich.text = value;
+    paintRich(exceptEl);
   }
 
   /* ---------- console wiring ---------- */
@@ -3020,11 +3391,56 @@ input[type=range]::-moz-range-thumb{
     root.dataset.case = btn.dataset.case;
   });
 
-  $("#strokeSeg").addEventListener("click", e => {
-    const btn = e.target.closest("button[data-stroke]");
-    if (!btn) return;
-    $$("#strokeSeg button").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
-    root.style.setProperty("--ui-stroke", btn.dataset.stroke);
+  /* ---------- text outline ----------
+     the old control only scaled whatever stroke a skin already carried,
+     and all but six ship none — so Soft and Bold did nothing on most
+     skins, and handed back the light skins' white cut-out on the rest.
+     the width and the colour are now set here outright, black by default */
+  const outW = $("#outWRange"), outCol = $("#outCol");
+
+  function paintOutline() {
+    const w = Number(outW.value);
+    root.dataset.outline = w > 0 ? "1" : "0";
+    root.style.setProperty("--tx-out-w", w + "px");
+    root.style.setProperty("--tx-out-c", outCol.value);
+    const label = w > 0 ? w.toFixed(1) + " px" : "Off";
+    $("#outWVal").textContent = label;
+    $("#fOutWVal").textContent = label;
+    $("#fOutWRange").value = outW.value;
+    $("#fOutCol").value = outCol.value;
+    /* the presets light up when the slider happens to sit on one */
+    const near = w === 0 ? "0" : (w <= 2.2 ? "1.6" : "3.2");
+    ["#strokeSeg", "#fStrokeSeg"].forEach(id => {
+      $$(id + " button").forEach(b =>
+        b.setAttribute("aria-pressed", String(b.dataset.stroke === near)));
+    });
+    /* the outer border rides on top of whatever stroke is live, so its
+       radius has to be recomputed whenever that width moves */
+    paintPresetShadow();
+  }
+
+  ["#strokeSeg", "#fStrokeSeg"].forEach(id => {
+    $(id).addEventListener("click", e => {
+      const btn = e.target.closest("button[data-stroke]");
+      if (!btn) return;
+      outW.value = btn.dataset.stroke;
+      paintOutline();
+    });
+  });
+
+  outW.addEventListener("input", paintOutline);
+  outCol.addEventListener("input", paintOutline);
+  $("#fOutWRange").addEventListener("input", () => { outW.value = $("#fOutWRange").value; paintOutline(); });
+  $("#fOutCol").addEventListener("input", () => { outCol.value = $("#fOutCol").value; paintOutline(); });
+
+  ["#outSwatches", "#fOutSwatches"].forEach(id => {
+    $(id).addEventListener("click", e => {
+      const btn = e.target.closest("button.chip[data-out]");
+      if (!btn) return;
+      outCol.value = btn.dataset.out;
+      if (Number(outW.value) === 0) outW.value = "1.6";
+      paintOutline();
+    });
   });
 
   const italicSw = $("#italicSw");
@@ -3078,9 +3494,13 @@ input[type=range]::-moz-range-thumb{
     if (!el) return;
     const slot = slotFor(el);
     if (!slot || slot.dataset.locked === "true") return;
-    const value = el.textContent;
-    textIn.value = value;
-    if (mirror) setText(value, el);
+    /* the bubble holds the colour spans, so read the marks back off it
+       rather than flattening what was typed */
+    const read = readMarks(el);
+    rich.text = read.text;
+    rich.marks = read.marks;
+    textIn.value = read.text;
+    if (mirror) paintRich(el);
   });
 
   /* editing the @handle inside any bubble drives every other bubble,
@@ -3118,6 +3538,305 @@ input[type=range]::-moz-range-thumb{
     if (e.key === "Enter") { e.preventDefault(); el.blur(); }
     if (e.key === "Escape") el.blur();
   });
+
+
+  /* ---------- preset style ----------
+     the CapCut row. one table drives the chips, the live bubbles and the
+     PNG, so a preset means the same thing in all three. a preset sets the
+     effect only — never the fill colour — so per-word highlights survive it */
+  const PRESETS = [
+    { id: "none",    label: "No style" },
+    /* these widths are deliberately light. a 3px stroke is a TikTok caption
+       weight, which assumes 40px type — at the 15–17px a bubble runs, that
+       much black closes the counters and the words read as a dark smear */
+    { id: "outline", label: "Black outline",       out: 1.4, outC: "#000000" },
+    { id: "border",  label: "Outline plus border", out: 1.1, outC: "#000000",
+      ring: { w: 1.8, c: "#FFFFFF" } },
+    { id: "shadow",  label: "Drop shadow",         out: 0,
+      sh: { x: 0, y: 3, blur: 4.5, c: "rgba(0,0,0,.8)" } },
+    { id: "glow",    label: "Soft glow",           out: 0,
+      sh: { x: 0, y: 0, blur: 13, c: "rgba(0,0,0,.95)" } }
+  ];
+  const PRESET_BY_ID = {};
+  PRESETS.forEach(p => { PRESET_BY_ID[p.id] = p; });
+  /* the export reads the same table rather than keeping a second copy */
+  window.RS.TEXT_PRESETS = PRESET_BY_ID;
+
+  /* a hard ring can't come from -webkit-text-stroke — that gives one stroke
+     only — so it is drawn as twelve zero-blur shadows around the glyph */
+  function ringShadow(r, col) {
+    const pts = [];
+    for (let i = 0; i < 12; i++) {
+      const a = i * Math.PI / 6;
+      pts.push((Math.sin(a) * r).toFixed(2) + "px " + (-Math.cos(a) * r).toFixed(2) + "px 0 " + col);
+    }
+    return pts.join(",");
+  }
+
+  const NONE_ICON = '<svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>';
+
+  function buildPresetRow(row) {
+    row.innerHTML = PRESETS.map(p =>
+      '<button class="pchip" type="button" data-preset="' + p.id + '" aria-pressed="' +
+        (p.id === "none") + '" title="' + p.label + '" aria-label="' + p.label + '">' +
+        (p.id === "none" ? NONE_ICON : '<span class="pchip__aa">Aa</span>') +
+      "</button>").join("");
+  }
+  [$("#presetRow"), $("#fPresetRow")].forEach(buildPresetRow);
+
+  /* the stroke actually on the glyphs: the Text outline knob as soon as it
+     is turned up at all, otherwise whatever the chosen preset carries */
+  function liveStroke() {
+    const manual = Number(outW.value);
+    if (manual > 0) return { w: manual, c: outCol.value };
+    const p = PRESET_BY_ID[root.dataset.preset || "none"];
+    return { w: (p && p.out) || 0, c: (p && p.outC) || "#000000" };
+  }
+
+  function paintPresetShadow() {
+    const p = PRESET_BY_ID[root.dataset.preset || "none"] || PRESET_BY_ID.none;
+    if (p.sh) {
+      root.style.setProperty("--tx-sh",
+        p.sh.x + "px " + p.sh.y + "px " + p.sh.blur + "px " + p.sh.c);
+      root.dataset.sh = "1";
+    } else if (p.ring) {
+      root.style.setProperty("--tx-sh", ringShadow(liveStroke().w + p.ring.w, p.ring.c));
+      root.dataset.sh = "1";
+    } else {
+      root.dataset.sh = "0";
+    }
+  }
+
+  /* a preset writes only its own properties — it never reaches into the
+     Text outline controls, so picking one leaves those knobs where you
+     left them instead of snapping the segment to Bold */
+  function applyPreset(id) {
+    const p = PRESET_BY_ID[id] || PRESET_BY_ID.none;
+    root.dataset.preset = p.id;
+    root.style.setProperty("--tx-pre-w", (p.out || 0) + "px");
+    root.style.setProperty("--tx-pre-c", p.outC || "#000000");
+    root.dataset.presetOut = p.out ? "1" : "0";
+    paintPresetShadow();
+    markPreset(p.id);
+  }
+
+  function markPreset(id) {
+    ["#presetRow", "#fPresetRow"].forEach(sel => {
+      $$(sel + " .pchip").forEach(b =>
+        b.setAttribute("aria-pressed", String(b.dataset.preset === id)));
+    });
+  }
+
+  ["#presetRow", "#fPresetRow"].forEach(sel => {
+    $(sel).addEventListener("click", e => {
+      const btn = e.target.closest(".pchip");
+      if (!btn) return;
+      applyPreset(btn.dataset.preset);
+      const t = window.ReplyStudio && window.ReplyStudio.toast;
+      if (t) t("Preset: " + PRESET_BY_ID[btn.dataset.preset].label);
+    });
+  });
+
+  /* first paint runs here, not in the outline block: paintOutline reaches
+     the preset table through paintPresetShadow, and that table is defined
+     down here */
+  applyPreset("none");
+  paintOutline();
+  /* ---------- highlighting a word ----------
+     select inside any bubble and a small bar follows the selection. every
+     swatch writes through the same mark model the mirror already uses, so
+     a colour lands on all unlocked bubbles and on the PNG at once */
+  const hlbar = $("#hlbar");
+
+  /* character offsets of a range, measured inside one bubble's text */
+  function offsetsIn(el, range) {
+    const pre = range.cloneRange();
+    pre.selectNodeContents(el);
+    pre.setEnd(range.startContainer, range.startOffset);
+    const s = pre.toString().length;
+    return { s: s, e: s + range.toString().length };
+  }
+
+  /* put the caret back over the same characters after a repaint */
+  function selectChars(el, s, e) {
+    const r = document.createRange();
+    const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+    let i = 0, node, started = false;
+    while ((node = walk.nextNode())) {
+      const len = node.nodeValue.length;
+      if (!started && s <= i + len) { r.setStart(node, s - i); started = true; }
+      if (started && e <= i + len) { r.setEnd(node, e - i); break; }
+      i += len;
+    }
+    if (!started) return;
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+
+  /* take a span of characters out of every mark it touches */
+  function cutMarks(marks, s, e) {
+    const out = [];
+    marks.forEach(m => {
+      if (m.e <= s || m.s >= e) { out.push({ s: m.s, e: m.e, c: m.c, g: m.g }); return; }
+      if (m.s < s) out.push({ s: m.s, e: s, c: m.c, g: m.g });
+      if (m.e > e) out.push({ s: e, e: m.e, c: m.c, g: m.g });
+    });
+    return out;
+  }
+
+  /* the live selection, plus the marks as they stood before this drag —
+     a colour drag reapplies from the snapshot instead of stacking */
+  let pick = null;
+
+  function placeBar() {
+    if (!pick) { hlbar.dataset.open = "false"; return; }
+    const r = pick.rect;
+    const w = hlbar.offsetWidth || 260;
+    const x = Math.min(window.innerWidth - w / 2 - 10, Math.max(w / 2 + 10, r.left + r.width / 2));
+    const above = r.top > 74;
+    hlbar.style.left = x + "px";
+    hlbar.style.top = (above ? r.top - 10 : r.bottom + 10) + "px";
+    hlbar.style.transform = above ? "translate(-50%,-100%)" : "translate(-50%,0)";
+    hlbar.dataset.open = "true";
+  }
+
+  document.addEventListener("selectionchange", () => {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const host = range.startContainer.nodeType === 1
+      ? range.startContainer : range.startContainer.parentNode;
+    const el = host && host.closest && host.closest(".bubble__text");
+    /* a click on a swatch or the colour input moves focus out of the
+       bubble — that must not throw the selection away */
+    if (!el) return;
+    if (sel.isCollapsed || !range.toString().trim()) {
+      pick = null;
+      hlbar.dataset.open = "false";
+      return;
+    }
+    const off = offsetsIn(el, range);
+    pick = { el: el, s: off.s, e: off.e, base: readMarks(el), rect: range.getBoundingClientRect() };
+    placeBar();
+  });
+
+  /* clicking away from both the bar and the bubbles puts the bar away */
+  document.addEventListener("pointerdown", e => {
+    if (!pick) return;
+    const t = e.target;
+    if (t.closest && (t.closest("#hlbar") || t.closest(".bubble__text") ||
+        t.closest("#hlSwatches") || t.closest("#hlGrads") || t.closest("#fHlSwatches"))) return;
+    pick = null;
+    hlbar.dataset.open = "false";
+  });
+
+  window.addEventListener("scroll", () => { if (pick) hlbar.dataset.open = "false"; }, true);
+
+  /* spec is {c:"#RRGGBB"} or {g:"from|to|angle"} — null clears */
+  function applySpec(spec, restore) {
+    if (!pick) {
+      const t = window.ReplyStudio && window.ReplyStudio.toast;
+      if (t) t("Select a word in a bubble first.");
+      return;
+    }
+    const slot = slotFor(pick.el);
+    let marks = cutMarks(pick.base.marks, pick.s, pick.e);
+    if (spec) marks.push({ s: pick.s, e: pick.e, c: spec.c || "", g: spec.g || "" });
+    marks = tidy(marks);
+
+    if (slot && slot.dataset.locked === "true") {
+      pick.el.innerHTML = renderRich(pick.base.text, marks);
+    } else {
+      rich.text = pick.base.text;
+      rich.marks = marks;
+      paintRich();
+    }
+    /* a colour drag skips this: stealing focus back would shut the
+       system colour picker mid-drag */
+    if (restore !== false) { selectChars(pick.el, pick.s, pick.e); placeBar(); }
+  }
+
+  function chipSpec(btn) {
+    if (btn.dataset.g) return { g: btn.dataset.g };
+    if (btn.dataset.hl === "none") return null;
+    return { c: btn.dataset.hl };
+  }
+
+  /* every swatch row — the bar, the console and the gear — runs one path */
+  ["#hlbar", "#hlSwatches", "#hlGrads", "#fHlSwatches"].forEach(sel => {
+    const row = $(sel);
+    if (!row) return;
+    /* pressing a swatch must not blur the bubble: losing focus would
+       collapse the very selection the swatch is about to colour. the
+       native colour input is exempt — blocking it never opens the picker */
+    row.addEventListener("mousedown", e => {
+      if (!e.target.closest("input")) e.preventDefault();
+    });
+    row.addEventListener("click", e => {
+      const btn = e.target.closest("button.chip");
+      if (!btn) return;
+      applySpec(chipSpec(btn), true);
+    });
+  });
+
+  /* the three native pickers preview live and stay in step with each other */
+  ["#hlbarPick", "#hlPick", "#fHlPick"].forEach(sel => {
+    const inp = $(sel);
+    if (!inp) return;
+    inp.addEventListener("input", () => {
+      ["#hlbarPick", "#hlPick", "#fHlPick"].forEach(o => { const t = $(o); if (t && t !== inp) t.value = inp.value; });
+      applySpec({ c: inp.value }, false);
+    });
+    inp.addEventListener("change", () => applySpec({ c: inp.value }, true));
+  });
+
+  $("#hlClearAll").addEventListener("click", () => {
+    rich.marks = [];
+    paintRich();
+    $$(".bubble__text").forEach(el => {
+      if (!$(".hl", el)) return;
+      const read = readMarks(el);
+      el.innerHTML = renderRich(read.text, []);
+    });
+    pick = null;
+    hlbar.dataset.open = "false";
+    const t = window.ReplyStudio && window.ReplyStudio.toast;
+    if (t) t("Highlights cleared.");
+  });
+
+  /* ---------- the plate behind the text ----------
+     one dark, blurred shape under the copy. the same three numbers drive
+     the live bubbles and the PNG, so what you set is what saves */
+  const plateA = $("#plateARange"), plateB = $("#plateBRange"), plateP = $("#platePRange");
+  const plateCol = $("#plateCol");
+
+  function paintPlate() {
+    const a = Number(plateA.value) / 100;
+    root.style.setProperty("--tx-plate-a", a.toFixed(3));
+    root.style.setProperty("--tx-plate-blur", plateB.value + "px");
+    root.style.setProperty("--tx-plate-pad", plateP.value + "px");
+    root.style.setProperty("--tx-plate-col", plateCol.value);
+    $("#plateAVal").textContent = a > 0 ? Math.round(a * 100) + "%" : "Off";
+    $("#plateBVal").textContent = plateB.value + " px";
+    $("#platePVal").textContent = plateP.value + " px";
+    $("#fPlateAVal").textContent = $("#plateAVal").textContent;
+    $("#fPlateBVal").textContent = $("#plateBVal").textContent;
+    $("#fPlateARange").value = plateA.value;
+    $("#fPlateBRange").value = plateB.value;
+    $("#fPlateCol").value = plateCol.value;
+  }
+
+  [plateA, plateB, plateP, plateCol].forEach(el => el.addEventListener("input", paintPlate));
+
+  /* the gear twins write through to the console controls, same as the
+     type knobs do, so there is still only one value anywhere */
+  [["#fPlateARange", plateA], ["#fPlateBRange", plateB], ["#fPlateCol", plateCol]].forEach(pair => {
+    const twin = $(pair[0]);
+    twin.addEventListener("input", () => { pair[1].value = twin.value; paintPlate(); });
+  });
+
+  paintPlate();
 
   /* ---------- typeface stepping straight from a bubble ---------- */
   /* the arrows drive the sidebar select, so both stay in step and the
@@ -3439,24 +4158,84 @@ input[type=range]::-moz-range-thumb{
     c.font = t.font;
     if ("letterSpacing" in c) c.letterSpacing = t.ls.toFixed(2) + "px";
     c.textAlign = "left"; c.textBaseline = "top";
-    c.fillStyle = sp.text.color;
-    if (sp.textGlow) shadow(c, sp.textGlow[0], sp.textGlow[1], 0, 0);
+
     const x = m.pad[3];
-    let y = m.pad[0] + (sp.headH || 34) + (sp.headGap != null ? sp.headGap : 10) + (t.lh - t.size) / 2;
-    const stroke = sp.stroke, sMul = t.strokeMul != null ? t.strokeMul : 1;
-    for (const ln of lines) {
-      if (sp.textPre) sp.textPre(c, ln, x, y, t);
-      if (stroke && stroke[1] * sMul > 0) {
+    const y0 = m.pad[0] + (sp.headH || 34) + (sp.headGap != null ? sp.headGap : 10) + (t.lh - t.size) / 2;
+
+    /* the plate first, blurred and clipped to the card so the halo never
+       spills past the sticker edge. it mirrors .bubble__text::after */
+    if (t.plate && t.plate.a > 0) {
+      /* the plate hugs the text element's own box — full inner width, top
+         at the first line box — so it lands exactly where the CSS puts it */
+      const bx = x, bw = m.w - m.pad[1] - m.pad[3];
+      const by = y0 - (t.lh - t.size) / 2, bh = lines.length * t.lh;
+      const px = t.plate.pad * 1.4, py = t.plate.pad;
+      c.save();
+      rr(c, 0, 0, m.w, m.h, 22); c.clip();
+      c.globalAlpha = t.plate.a;
+      c.fillStyle = t.plate.col;
+      if (t.plate.blur > 0) c.filter = "blur(" + t.plate.blur + "px)";
+      rr(c, bx - px, by - py, bw + px * 2, bh + py * 2, 16);
+      c.fill();
+      c.restore();
+      clearShadow(c);
+    }
+
+    /* the outline control is the only thing that draws a stroke, in the PNG
+       exactly as on screen. a skin's own stroke stayed switched off in the
+       CSS but was still painted here, so saved cards grew an outline the
+       preview never showed */
+    const ow = (t.out && t.out.on) ? t.out.w : 0;
+    const oc = t.out ? t.out.c : "#000000";
+    const pre = t.out && t.out.preset;
+    const ring = pre && pre.ring ? pre.ring : null;
+    const sh = pre && pre.sh ? pre.sh : null;
+    /* a preset's text-shadow replaces the skin's own glow outright, the way
+       the !important rule does in the CSS */
+    if (sp.textGlow && !sh && !ring) shadow(c, sp.textGlow[0], sp.textGlow[1], 0, 0);
+
+    /* canvas centres a stroke on the outline; CSS throws it outward, so
+       every width doubles to land on the same silhouette */
+    const strokeRun = (txt, px, py, width, col) => {
+      c.lineJoin = "round"; c.miterLimit = 2;
+      c.lineWidth = width * 2;
+      c.strokeStyle = col;
+      c.strokeText(txt, px, py);
+    };
+
+    let y = y0;
+    for (const segs of lines) {
+      const flat = segs.map(s => s.t).join("");
+      if (sp.textPre) sp.textPre(c, flat, x, y, t);
+
+      /* the shadow goes down once, under the widest shape the line has —
+         later passes cover it, so it never doubles up on a seam */
+      if (sh) {
         c.save();
-        clearShadow(c);
-        c.lineJoin = "round"; c.miterLimit = 2;
-        c.lineWidth = stroke[1] * sMul * 2;   /* canvas strokes centred; CSS strokes outward */
-        c.strokeStyle = stroke[0];
-        c.strokeText(ln, x, y);
+        shadow(c, sh.c, sh.blur, sh.x, sh.y);
+        if (ring) strokeRun(flat, x, y, ow + ring.w, ring.c);
+        else if (ow > 0) strokeRun(flat, x, y, ow, oc);
+        else { c.fillStyle = sp.text.color; c.fillText(flat, x, y); }
         c.restore();
       }
-      c.fillStyle = sp.text.color;
-      c.fillText(ln, x, y);
+
+      if (ring) {
+        c.save(); clearShadow(c);
+        strokeRun(flat, x, y, ow + ring.w, ring.c);
+        c.restore();
+      }
+      if (ow > 0) {
+        c.save(); clearShadow(c);
+        strokeRun(flat, x, y, ow, oc);
+        c.restore();
+      }
+
+      let cx = x;
+      for (const seg of segs) {
+        c.fillStyle = runFill(c, seg.r || {}, cx, y, seg.w, t.size, sp.text.color);
+        c.fillText(seg.t, cx, y);
+        cx += seg.w;
+      }
       y += t.lh;
     }
     c.restore();
@@ -4037,8 +4816,66 @@ input[type=range]::-moz-range-thumb{
       italic: root.dataset.italic === "1",
       hue:    num("--ui-hue", 0),
       sat:    num("--ui-sat", 1),
-      stroke: num("--ui-stroke", 1)
+      stroke: num("--ui-stroke", 1),
+      /* the knob wins when it is turned up, else the preset's own stroke —
+         the same precedence the two CSS rules encode */
+      outline: root.dataset.outline === "1" || root.dataset.presetOut === "1",
+      outW:    root.dataset.outline === "1" ? num("--tx-out-w", 0) : num("--tx-pre-w", 0),
+      outC:    root.dataset.outline === "1"
+                 ? (cs.getPropertyValue("--tx-out-c").trim() || "#000000")
+                 : (cs.getPropertyValue("--tx-pre-c").trim() || "#000000"),
+      /* the preset table lives with the controls; read it, never copy it */
+      preset:  (window.RS && window.RS.TEXT_PRESETS &&
+                window.RS.TEXT_PRESETS[root.dataset.preset || "none"]) || null,
+      plateA:    num("--tx-plate-a", 0),
+      plateBlur: num("--tx-plate-blur", 14),
+      platePad:  num("--tx-plate-pad", 10),
+      plateCol:  (cs.getPropertyValue("--tx-plate-col").trim() || "#0B0A0A")
     };
+  }
+
+  /* ---------------- coloured runs ----------------
+     the bubble carries one flat span per coloured run, so the PNG reads
+     the same runs straight off the DOM and paints each one itself */
+  function readRuns(el) {
+    const runs = [];
+    (function walk(node, spec) {
+      Array.prototype.forEach.call(node.childNodes, ch => {
+        if (ch.nodeType === 3) {
+          if (ch.nodeValue) runs.push({ t: ch.nodeValue, c: spec && spec.c, g: spec && spec.g });
+          return;
+        }
+        if (ch.nodeType !== 1) return;
+        if (ch.tagName === "BR") { runs.push({ t: " " }); return; }
+        let s = spec;
+        if (ch.classList && ch.classList.contains("hl")) {
+          const g = ch.getAttribute("data-g"), c = ch.getAttribute("data-c");
+          s = (g || c) ? { c: c || "", g: g || "" } : null;
+        }
+        walk(ch, s);
+      });
+    })(el, null);
+    return runs;
+  }
+
+  /* trim the way .trim() would, but across the run list */
+  function trimRuns(runs) {
+    const out = runs.map(r => ({ t: r.t, c: r.c, g: r.g })).filter(r => r.t);
+    while (out.length && !out[0].t.trim()) out.shift();
+    if (out.length) out[0].t = out[0].t.replace(/^\s+/, "");
+    while (out.length && !out[out.length - 1].t.trim()) out.pop();
+    if (out.length) out[out.length - 1].t = out[out.length - 1].t.replace(/\s+$/, "");
+    return out.filter(r => r.t);
+  }
+
+  /* a gradient run is stored as "from|to|angle" — rebuild the same ramp
+     across the piece of the line the run actually occupies */
+  function runFill(c, r, x, y, w, h, fallback) {
+    if (!r.g) return r.c || fallback;
+    const p = String(r.g).split("|");
+    const deg = parseFloat(p[2]);
+    return lin(c, isNaN(deg) ? 100 : deg, x, y, Math.max(w, 1), Math.max(h, 1),
+               [[0, p[0]], [1, p[1] || p[0]]]);
   }
 
   /* the Letter case control is the only authority — a skin never forces case */
@@ -4049,18 +4886,45 @@ input[type=range]::-moz-range-thumb{
     return t;
   }
 
-  function wrap(c, text, maxW) {
-    const words = String(text).split(/\s+/).filter(Boolean);
-    if (!words.length) return [""];
-    const out = [];
-    let cur = words[0];
-    for (let i = 1; i < words.length; i++) {
-      const t = cur + " " + words[i];
-      if (c.measureText(t).width <= maxW) cur = t;
-      else { out.push(cur); cur = words[i]; }
-    }
-    out.push(cur);
-    return out;
+  /* greedy wrap that never breaks a run apart from its colour: words and
+     the spaces between them carry the run they came from, and each line
+     comes back as a list of same-colour segments to draw left to right */
+  function wrap(c, runs, maxW) {
+    const toks = [];
+    runs.forEach(r => {
+      String(r.t).split(/(\s+)/).forEach(p => {
+        if (p) toks.push({ t: p, r: r, sp: !p.trim() });
+      });
+    });
+
+    const lines = [];
+    let cur = [], w = 0;
+    const widthOf = tk => c.measureText(tk.t).width;
+
+    toks.forEach(tk => {
+      const tw = widthOf(tk);
+      if (tk.sp) { if (cur.length) { cur.push(tk); w += tw; } return; }
+      if (cur.length && w + tw > maxW) {
+        while (cur.length && cur[cur.length - 1].sp) w -= widthOf(cur.pop());
+        lines.push(cur); cur = []; w = 0;
+      }
+      cur.push(tk); w += tw;
+    });
+    if (cur.length) lines.push(cur);
+    if (!lines.length) lines.push([]);
+
+    /* fuse neighbouring tokens that share a run into one drawable piece */
+    return lines.map(line => {
+      const segs = [];
+      line.forEach(tk => {
+        const last = segs[segs.length - 1];
+        if (last && last.r === tk.r) last.t += tk.t;
+        else segs.push({ t: tk.t, r: tk.r });
+      });
+      if (segs.length) segs[segs.length - 1].t = segs[segs.length - 1].t.replace(/\s+$/, "");
+      segs.forEach(s => { s.w = c.measureText(s.t).width; });
+      return segs;
+    });
   }
 
   async function ensureFonts(list) {
@@ -4097,9 +4961,22 @@ input[type=range]::-moz-range-thumb{
     const bubble = slot.querySelector(".bubble") ||
                    document.querySelector('.focus__ground .bubble.b-' + slot.dataset.skin);
     if (!bubble) throw new Error("bubble not found");
-    const rawText = (bubble.querySelector(".bubble__text").textContent || "").trim();
+    let runs = trimRuns(readRuns(bubble.querySelector(".bubble__text")));
+    const rawText = runs.map(r => r.t).join("");
+    if (!rawText) runs = [{ t: "Insert text here" }];
     const user = (bubble.querySelector(".bubble__user").textContent || "@user").trim();
-    const text = applyCase(rawText || "Insert text here", k.caseMode);
+
+    /* case the whole sentence, then hand the letters back to the runs they
+       came from — a per-run pass would title-case a highlight that starts
+       mid-word. lengths only ever differ on exotic casing, so fall back */
+    const joined = runs.map(r => r.t).join("");
+    const cased = applyCase(joined, k.caseMode);
+    if (cased.length === joined.length) {
+      let at = 0;
+      runs.forEach(r => { r.t = cased.substr(at, r.t.length); at += r.t.length; });
+    } else {
+      runs.forEach(r => { r.t = applyCase(r.t, k.caseMode); });
+    }
 
     const family = k.family || sp.text.family;
     const weight = k.weight || sp.text.weight;
@@ -4119,7 +4996,7 @@ input[type=range]::-moz-range-thumb{
     scratch.font = font;
     if ("letterSpacing" in scratch) scratch.letterSpacing = ls.toFixed(2) + "px";
     const innerW = CARD_W - sp.pad[1] - sp.pad[3];
-    const lines = wrap(scratch, text, innerW);
+    const lines = wrap(scratch, runs, innerW);
 
     const headH = sp.headH || 34;
     const gap   = sp.headGap != null ? sp.headGap : 10;
@@ -4143,7 +5020,11 @@ input[type=range]::-moz-range-thumb{
     sp.draw(c, m);
     clearShadow(c);
     drawHead(c, m, sp, user);
-    drawBody(c, m, sp, lines, { font: font, ls: ls, lh: lh, size: size, strokeMul: k.stroke });
+    drawBody(c, m, sp, lines, {
+      font: font, ls: ls, lh: lh, size: size, strokeMul: k.stroke,
+      out: { on: k.outline, w: k.outW, c: k.outC, preset: k.preset },
+      plate: { a: k.plateA, blur: k.plateBlur, pad: k.platePad, col: k.plateCol }
+    });
     c.restore();
 
     let sticker = cv;
