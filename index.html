@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Reply Bubble Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -502,6 +503,13 @@ input[type=range]::-moz-range-thumb{
 :root[data-outline="1"] .bubble__text{
   -webkit-text-stroke-width:var(--tx-out-w,0px)!important;
   -webkit-text-stroke-color:var(--tx-out-c,#000000)!important;
+}
+/* a preset paints the letters too — white, or the yellow one. it lands on
+   the block, so a highlighted run keeps its own colour: that span carries
+   its own rule and this one never reaches inside it */
+:root[data-preset-fill="1"] .bubble__text{
+  color:var(--tx-fill)!important;
+  -webkit-text-fill-color:var(--tx-fill)!important;
 }
 /* a preset carries its own stroke on its own two properties, so choosing
    one never reaches over and moves the Text outline knobs. there is only
@@ -1148,14 +1156,17 @@ input[type=range]::-moz-range-thumb{
 
 
 /* ============================================================
-   PRESET STYLE — the CapCut row. one tap sets the outline, the
-   outer border and the shadow together
+   PRESET STYLE — the CapCut row. one tap sets the letter colour,
+   the outline and the shadow together
    ============================================================ */
 :root[data-sh="1"] .bubble__text{text-shadow:var(--tx-sh)!important;}
 
-.presets{display:flex;flex-wrap:wrap;gap:8px;}
+/* the chips share the panel evenly and stay on one row instead of
+   wrapping the moment a preset is added */
+.presets{display:flex;gap:6px;}
 .pchip{
-  width:46px;height:46px;flex:none;padding:0;cursor:pointer;
+  flex:1 1 0;min-width:0;width:auto;height:auto;aspect-ratio:1;max-width:46px;
+  padding:0;cursor:pointer;
   display:grid;place-items:center;
   border-radius:11px;border:1px solid rgba(255,255,255,.14);
   /* the swatches stay dark in both themes: every preset is drawn for
@@ -1171,19 +1182,12 @@ input[type=range]::-moz-range-thumb{
   paint-order:stroke fill;
 }
 /* the thumbnails mirror the real presets, scaled to a 46px tile */
-.pchip[data-preset="outline"] .pchip__aa{-webkit-text-stroke:1.4px #000;}
-.pchip[data-preset="border"] .pchip__aa{
-  -webkit-text-stroke:1.1px #000;
-  text-shadow:
-    0 -2.9px 0 #FFF, 1.45px -2.51px 0 #FFF, 2.51px -1.45px 0 #FFF, 2.9px 0 0 #FFF,
-    2.51px 1.45px 0 #FFF, 1.45px 2.51px 0 #FFF, 0 2.9px 0 #FFF, -1.45px 2.51px 0 #FFF,
-    -2.51px 1.45px 0 #FFF, -2.9px 0 0 #FFF, -2.51px -1.45px 0 #FFF, -1.45px -2.51px 0 #FFF;
-}
+.pchip[data-preset="outline"] .pchip__aa{-webkit-text-stroke:2px #000;}
 .pchip[data-preset="shadow"] .pchip__aa{text-shadow:0 2px 2.5px rgba(0,0,0,.85);}
 .pchip[data-preset="glow"] .pchip__aa{text-shadow:0 0 7px rgba(0,0,0,.98),0 0 3px rgba(0,0,0,.9);}
+.pchip[data-preset="pop"] .pchip__aa{color:#FFD23F;-webkit-text-stroke:2px #000;}
 /* ============================================================
-   TEXT HIGHLIGHT — per-word colour, gradients, and the dark
-   blurred plate that sits behind the copy so bright words pop
+   TEXT HIGHLIGHT — per-word colour and gradients
    ============================================================ */
 
 /* a coloured run. the span carries its own custom properties so one
@@ -1197,20 +1201,6 @@ input[type=range]::-moz-range-thumb{
   background-image:var(--hl-g);
   -webkit-background-clip:text;background-clip:text;
   color:transparent;-webkit-text-fill-color:transparent;
-}
-
-/* the plate. it lives behind the text inside the text element's own
-   stacking context, so it covers the bubble art but never the glyphs */
-.bubble__text::after{
-  content:"";
-  position:absolute;z-index:-1;
-  inset:calc(var(--tx-plate-pad,10px) * -1) calc(var(--tx-plate-pad,10px) * -1.4);
-  border-radius:var(--tx-plate-r,16px);
-  background:var(--tx-plate-col,#0B0A0A);
-  opacity:var(--tx-plate-a,0);
-  filter:blur(var(--tx-plate-blur,14px));
-  pointer-events:none;
-  transition:opacity .16s;
 }
 
 /* ---- console + gear controls ---- */
@@ -1373,13 +1363,13 @@ input[type=range]::-moz-range-thumb{
         <label>Text outline</label>
         <div class="seg" id="strokeSeg" role="group" aria-label="Text outline">
           <button type="button" data-stroke="0" aria-pressed="true">Off</button>
-          <button type="button" data-stroke="1.6" aria-pressed="false">Soft</button>
-          <button type="button" data-stroke="3.2" aria-pressed="false">Bold</button>
+          <button type="button" data-stroke="0.8" aria-pressed="false">Soft</button>
+          <button type="button" data-stroke="1.6" aria-pressed="false">Bold</button>
         </div>
       </div>
       <div class="slider">
         <div class="slider__top"><span>Outline width</span><span class="slider__val" id="outWVal">Off</span></div>
-        <input type="range" id="outWRange" min="0" max="9" step="0.2" value="0" aria-label="Outline width">
+        <input type="range" id="outWRange" min="0" max="4" step="0.1" value="0" aria-label="Outline width">
       </div>
       <div class="field">
         <label for="outCol">Outline colour</label>
@@ -1390,6 +1380,15 @@ input[type=range]::-moz-range-thumb{
           <span class="hl-hint" style="margin:0">Black reads like TikTok captions.</span>
         </div>
       </div>
+      <div class="slider">
+        <div class="slider__top"><span>Black shadow</span><span class="slider__val" id="shDVal">Off</span></div>
+        <input type="range" id="shDRange" min="0" max="14" step="0.5" value="0" aria-label="Black shadow">
+      </div>
+      <div class="slider">
+        <div class="slider__top"><span>Shadow strength</span><span class="slider__val" id="shAVal">80%</span></div>
+        <input type="range" id="shARange" min="0" max="100" step="1" value="80" aria-label="Shadow strength">
+      </div>
+      <div class="hl-hint">Drops straight down under the words, the way a TikTok caption sits on video.</div>
       <button class="switch" id="italicSw" type="button" aria-pressed="false">
         <span class="switch__label"><b>Italic</b>Slant the comment text</span>
         <span class="switch__track"></span>
@@ -1425,26 +1424,6 @@ input[type=range]::-moz-range-thumb{
         </div>
       </div>
       <button class="ghost-btn" id="hlClearAll" type="button">Clear every highlight</button>
-
-      <div class="field">
-        <label for="plateCol">Dark plate behind the text</label>
-        <div class="swatches">
-          <input class="chip chip--pick" type="color" id="plateCol" value="#0B0A0A" title="Plate colour" aria-label="Plate colour">
-          <span class="hl-hint" style="margin:0">Blurs in behind the copy so bright words carry.</span>
-        </div>
-      </div>
-      <div class="slider">
-        <div class="slider__top"><span>Plate strength</span><span class="slider__val" id="plateAVal">Off</span></div>
-        <input type="range" id="plateARange" min="0" max="100" step="1" value="0" aria-label="Plate strength">
-      </div>
-      <div class="slider">
-        <div class="slider__top"><span>Bluriness</span><span class="slider__val" id="plateBVal">14 px</span></div>
-        <input type="range" id="plateBRange" min="0" max="46" step="1" value="14" aria-label="Plate bluriness">
-      </div>
-      <div class="slider">
-        <div class="slider__top"><span>Plate spread</span><span class="slider__val" id="platePVal">10 px</span></div>
-        <input type="range" id="platePRange" min="0" max="40" step="1" value="10" aria-label="Plate spread">
-      </div>
     </div>
 
     <div class="group">
@@ -1569,13 +1548,13 @@ input[type=range]::-moz-range-thumb{
         <label>Text outline</label>
         <div class="seg" id="fStrokeSeg" role="group" aria-label="Text outline">
           <button type="button" data-stroke="0" aria-pressed="true">Off</button>
-          <button type="button" data-stroke="1.6" aria-pressed="false">Soft</button>
-          <button type="button" data-stroke="3.2" aria-pressed="false">Bold</button>
+          <button type="button" data-stroke="0.8" aria-pressed="false">Soft</button>
+          <button type="button" data-stroke="1.6" aria-pressed="false">Bold</button>
         </div>
       </div>
       <div class="slider">
         <div class="slider__top"><span>Outline width</span><span class="slider__val" id="fOutWVal">Off</span></div>
-        <input type="range" id="fOutWRange" min="0" max="9" step="0.2" value="0" aria-label="Outline width">
+        <input type="range" id="fOutWRange" min="0" max="4" step="0.1" value="0" aria-label="Outline width">
       </div>
       <div class="field">
         <label for="fOutCol">Outline colour</label>
@@ -1584,6 +1563,14 @@ input[type=range]::-moz-range-thumb{
           <button class="chip" type="button" data-out="#FFFFFF" title="White" aria-label="White outline" style="background:#FFFFFF"></button>
           <input class="chip chip--pick" type="color" id="fOutCol" value="#000000" aria-label="Pick any outline colour">
         </div>
+      </div>
+      <div class="slider">
+        <div class="slider__top"><span>Black shadow</span><span class="slider__val" id="fShDVal">Off</span></div>
+        <input type="range" id="fShDRange" min="0" max="14" step="0.5" value="0" aria-label="Black shadow">
+      </div>
+      <div class="slider">
+        <div class="slider__top"><span>Shadow strength</span><span class="slider__val" id="fShAVal">80%</span></div>
+        <input type="range" id="fShARange" min="0" max="100" step="1" value="80" aria-label="Shadow strength">
       </div>
       <div class="field slider--wide">
         <label>Color specific text</label>
@@ -1605,18 +1592,6 @@ input[type=range]::-moz-range-thumb{
           <button class="chip" type="button" data-g="#2BE08A|#0F9E7A|100" title="Mint" aria-label="Mint gradient" style="background:linear-gradient(100deg,#2BE08A,#0F9E7A)"></button>
         </div>
         <div class="hl-hint">Select a word in the bubble above, then pick a colour.</div>
-      </div>
-      <div class="slider">
-        <div class="slider__top"><span>Plate strength</span><span class="slider__val" id="fPlateAVal">Off</span></div>
-        <input type="range" id="fPlateARange" min="0" max="100" step="1" value="0" aria-label="Plate strength">
-      </div>
-      <div class="slider">
-        <div class="slider__top"><span>Bluriness</span><span class="slider__val" id="fPlateBVal">14 px</span></div>
-        <input type="range" id="fPlateBRange" min="0" max="46" step="1" value="14" aria-label="Plate bluriness">
-      </div>
-      <div class="field">
-        <label for="fPlateCol">Plate colour</label>
-        <div class="swatches"><input class="chip chip--pick" type="color" id="fPlateCol" value="#0B0A0A" aria-label="Plate colour"></div>
       </div>
       <button class="ghost-btn" id="fResetType" type="button">Back to each skin's own type</button>
     </div>
@@ -3398,6 +3373,40 @@ input[type=range]::-moz-range-thumb{
      the width and the colour are now set here outright, black by default */
   const outW = $("#outWRange"), outCol = $("#outCol");
 
+  /* ---------- black shadow ----------
+     the TikTok caption drop: one hard black shape straight under the
+     glyphs, no sideways offset. the blur grows with the distance so a
+     big drop stays soft-edged instead of reading as a second outline */
+  const shD = $("#shDRange"), shA = $("#shARange");
+  const shBlur = d => d * .6 + .8;
+  /* strength past halfway stops being an alpha problem: a single blurred
+     shadow at alpha 1 still reads grey, because the blur spreads the ink.
+     laying the identical shadow down two or three times compounds it —
+     1-(1-a)^n — so the top of the slider is a solid black shape */
+  const shReps = v => (v <= 45 ? 1 : v <= 75 ? 2 : 3);
+  const shCol  = v => "rgba(0,0,0," + (v / 100).toFixed(2) + ")";
+
+  function paintShadow() {
+    const d = Number(shD.value);
+    root.style.setProperty("--tx-sh-d", d);
+    root.style.setProperty("--tx-sh-a", shA.value);
+    const label = d > 0 ? d.toFixed(1) + " px" : "Off";
+    $("#shDVal").textContent = label;
+    $("#fShDVal").textContent = label;
+    $("#fShDRange").value = shD.value;
+    const aLabel = shA.value + "%";
+    $("#shAVal").textContent = aLabel;
+    $("#fShAVal").textContent = aLabel;
+    $("#fShARange").value = shA.value;
+    paintPresetShadow();
+  }
+
+  [shD, shA].forEach(el => el.addEventListener("input", paintShadow));
+  [["#fShDRange", shD], ["#fShARange", shA]].forEach(pair => {
+    const twin = $(pair[0]);
+    twin.addEventListener("input", () => { pair[1].value = twin.value; paintShadow(); });
+  });
+
   function paintOutline() {
     const w = Number(outW.value);
     root.dataset.outline = w > 0 ? "1" : "0";
@@ -3409,7 +3418,7 @@ input[type=range]::-moz-range-thumb{
     $("#fOutWRange").value = outW.value;
     $("#fOutCol").value = outCol.value;
     /* the presets light up when the slider happens to sit on one */
-    const near = w === 0 ? "0" : (w <= 2.2 ? "1.6" : "3.2");
+    const near = w === 0 ? "0" : (w <= 1.1 ? "0.8" : "1.6");
     ["#strokeSeg", "#fStrokeSeg"].forEach(id => {
       $$(id + " button").forEach(b =>
         b.setAttribute("aria-pressed", String(b.dataset.stroke === near)));
@@ -3438,7 +3447,7 @@ input[type=range]::-moz-range-thumb{
       const btn = e.target.closest("button.chip[data-out]");
       if (!btn) return;
       outCol.value = btn.dataset.out;
-      if (Number(outW.value) === 0) outW.value = "1.6";
+      if (Number(outW.value) === 0) outW.value = "0.8";
       paintOutline();
     });
   });
@@ -3543,35 +3552,33 @@ input[type=range]::-moz-range-thumb{
   /* ---------- preset style ----------
      the CapCut row. one table drives the chips, the live bubbles and the
      PNG, so a preset means the same thing in all three. a preset sets the
-     effect only — never the fill colour — so per-word highlights survive it */
+     letter colour as well as the effect, the way CapCut's do — a black
+     border round white type, not a black body. a per-word highlight still
+     wins: it colours its own span, and the preset only paints the block */
   const PRESETS = [
     { id: "none",    label: "No style" },
-    /* these widths are deliberately light. a 3px stroke is a TikTok caption
-       weight, which assumes 40px type — at the 15–17px a bubble runs, that
-       much black closes the counters and the words read as a dark smear */
-    { id: "outline", label: "Black outline",       out: 1.4, outC: "#000000" },
-    { id: "border",  label: "Outline plus border", out: 1.1, outC: "#000000",
-      ring: { w: 1.8, c: "#FFFFFF" } },
-    { id: "shadow",  label: "Drop shadow",         out: 0,
-      sh: { x: 0, y: 3, blur: 4.5, c: "rgba(0,0,0,.8)" } },
-    { id: "glow",    label: "Soft glow",           out: 0,
-      sh: { x: 0, y: 0, blur: 13, c: "rgba(0,0,0,.95)" } }
+    /* CapCut's row. each one paints the letters white — the black on a
+       preset is the border, never the body, so the words stay readable
+       instead of going to a dark smear. widths are half of what a 40px
+       TikTok caption uses: the stroke is centred on the glyph and the
+       fill covers its inner half, so only half a width shows outside */
+    { id: "outline", label: "White on black outline", fill: "#FFFFFF",
+      out: 2.0, outC: "#000000" },
+    { id: "shadow",  label: "Drop shadow",            fill: "#FFFFFF",
+      out: 0, sh: { x: 0, y: 3, blur: 4.5, c: "rgba(0,0,0,.8)" } },
+    /* the only preset that carries knob values: the halo alone is too
+       soft to hold an edge, so it ships with the outline and the drop
+       that were dialled in against it */
+    { id: "glow",    label: "Soft glow",              fill: "#FFFFFF",
+      out: 0, sh: { x: 0, y: 0, blur: 13, c: "rgba(0,0,0,.95)" },
+      set: { outW: 1.5, outC: "#000000", shD: 2, shA: 62 } },
+    { id: "pop",     label: "Yellow on black outline", fill: "#FFD23F",
+      out: 2.0, outC: "#000000" }
   ];
   const PRESET_BY_ID = {};
   PRESETS.forEach(p => { PRESET_BY_ID[p.id] = p; });
   /* the export reads the same table rather than keeping a second copy */
   window.RS.TEXT_PRESETS = PRESET_BY_ID;
-
-  /* a hard ring can't come from -webkit-text-stroke — that gives one stroke
-     only — so it is drawn as twelve zero-blur shadows around the glyph */
-  function ringShadow(r, col) {
-    const pts = [];
-    for (let i = 0; i < 12; i++) {
-      const a = i * Math.PI / 6;
-      pts.push((Math.sin(a) * r).toFixed(2) + "px " + (-Math.cos(a) * r).toFixed(2) + "px 0 " + col);
-    }
-    return pts.join(",");
-  }
 
   const NONE_ICON = '<svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>';
 
@@ -3593,29 +3600,43 @@ input[type=range]::-moz-range-thumb{
     return { w: (p && p.out) || 0, c: (p && p.outC) || "#000000" };
   }
 
+  /* text-shadow takes a list, so the Black shadow knob and a preset's own
+     shadow stack instead of one clobbering the other. the knob's drop is
+     listed first, which paints it nearest the glyphs */
   function paintPresetShadow() {
     const p = PRESET_BY_ID[root.dataset.preset || "none"] || PRESET_BY_ID.none;
-    if (p.sh) {
-      root.style.setProperty("--tx-sh",
-        p.sh.x + "px " + p.sh.y + "px " + p.sh.blur + "px " + p.sh.c);
-      root.dataset.sh = "1";
-    } else if (p.ring) {
-      root.style.setProperty("--tx-sh", ringShadow(liveStroke().w + p.ring.w, p.ring.c));
-      root.dataset.sh = "1";
-    } else {
-      root.dataset.sh = "0";
+    const layers = [];
+    const d = Number(shD.value);
+    if (d > 0) {
+      const v = Number(shA.value);
+      const one = "0 " + d + "px " + shBlur(d).toFixed(2) + "px " + shCol(v);
+      for (let i = shReps(v); i > 0; i--) layers.push(one);
     }
+    if (p.sh) layers.push(p.sh.x + "px " + p.sh.y + "px " + p.sh.blur + "px " + p.sh.c);
+    root.dataset.sh = layers.length ? "1" : "0";
+    if (layers.length) root.style.setProperty("--tx-sh", layers.join(","));
   }
 
-  /* a preset writes only its own properties — it never reaches into the
-     Text outline controls, so picking one leaves those knobs where you
-     left them instead of snapping the segment to Bold */
+  /* a preset writes only its own properties, so picking one leaves the
+     Text outline knobs where you left them — unless it ships a `set`,
+     which drives those same controls through their own paint functions
+     so the sliders, the twins in the gear and the PNG all agree */
   function applyPreset(id) {
     const p = PRESET_BY_ID[id] || PRESET_BY_ID.none;
     root.dataset.preset = p.id;
     root.style.setProperty("--tx-pre-w", (p.out || 0) + "px");
     root.style.setProperty("--tx-pre-c", p.outC || "#000000");
     root.dataset.presetOut = p.out ? "1" : "0";
+    root.style.setProperty("--tx-fill", p.fill || "");
+    root.dataset.presetFill = p.fill ? "1" : "0";
+    if (p.set) {
+      outW.value = p.set.outW;
+      outCol.value = p.set.outC;
+      shD.value = p.set.shD;
+      shA.value = p.set.shA;
+      paintOutline();
+      paintShadow();
+    }
     paintPresetShadow();
     markPreset(p.id);
   }
@@ -3642,6 +3663,7 @@ input[type=range]::-moz-range-thumb{
      down here */
   applyPreset("none");
   paintOutline();
+  paintShadow();
   /* ---------- highlighting a word ----------
      select inside any bubble and a small bar follows the selection. every
      swatch writes through the same mark model the mirror already uses, so
@@ -3804,39 +3826,6 @@ input[type=range]::-moz-range-thumb{
     const t = window.ReplyStudio && window.ReplyStudio.toast;
     if (t) t("Highlights cleared.");
   });
-
-  /* ---------- the plate behind the text ----------
-     one dark, blurred shape under the copy. the same three numbers drive
-     the live bubbles and the PNG, so what you set is what saves */
-  const plateA = $("#plateARange"), plateB = $("#plateBRange"), plateP = $("#platePRange");
-  const plateCol = $("#plateCol");
-
-  function paintPlate() {
-    const a = Number(plateA.value) / 100;
-    root.style.setProperty("--tx-plate-a", a.toFixed(3));
-    root.style.setProperty("--tx-plate-blur", plateB.value + "px");
-    root.style.setProperty("--tx-plate-pad", plateP.value + "px");
-    root.style.setProperty("--tx-plate-col", plateCol.value);
-    $("#plateAVal").textContent = a > 0 ? Math.round(a * 100) + "%" : "Off";
-    $("#plateBVal").textContent = plateB.value + " px";
-    $("#platePVal").textContent = plateP.value + " px";
-    $("#fPlateAVal").textContent = $("#plateAVal").textContent;
-    $("#fPlateBVal").textContent = $("#plateBVal").textContent;
-    $("#fPlateARange").value = plateA.value;
-    $("#fPlateBRange").value = plateB.value;
-    $("#fPlateCol").value = plateCol.value;
-  }
-
-  [plateA, plateB, plateP, plateCol].forEach(el => el.addEventListener("input", paintPlate));
-
-  /* the gear twins write through to the console controls, same as the
-     type knobs do, so there is still only one value anywhere */
-  [["#fPlateARange", plateA], ["#fPlateBRange", plateB], ["#fPlateCol", plateCol]].forEach(pair => {
-    const twin = $(pair[0]);
-    twin.addEventListener("input", () => { pair[1].value = twin.value; paintPlate(); });
-  });
-
-  paintPlate();
 
   /* ---------- typeface stepping straight from a bubble ---------- */
   /* the arrows drive the sidebar select, so both stay in step and the
@@ -4162,25 +4151,6 @@ input[type=range]::-moz-range-thumb{
     const x = m.pad[3];
     const y0 = m.pad[0] + (sp.headH || 34) + (sp.headGap != null ? sp.headGap : 10) + (t.lh - t.size) / 2;
 
-    /* the plate first, blurred and clipped to the card so the halo never
-       spills past the sticker edge. it mirrors .bubble__text::after */
-    if (t.plate && t.plate.a > 0) {
-      /* the plate hugs the text element's own box — full inner width, top
-         at the first line box — so it lands exactly where the CSS puts it */
-      const bx = x, bw = m.w - m.pad[1] - m.pad[3];
-      const by = y0 - (t.lh - t.size) / 2, bh = lines.length * t.lh;
-      const px = t.plate.pad * 1.4, py = t.plate.pad;
-      c.save();
-      rr(c, 0, 0, m.w, m.h, 22); c.clip();
-      c.globalAlpha = t.plate.a;
-      c.fillStyle = t.plate.col;
-      if (t.plate.blur > 0) c.filter = "blur(" + t.plate.blur + "px)";
-      rr(c, bx - px, by - py, bw + px * 2, bh + py * 2, 16);
-      c.fill();
-      c.restore();
-      clearShadow(c);
-    }
-
     /* the outline control is the only thing that draws a stroke, in the PNG
        exactly as on screen. a skin's own stroke stayed switched off in the
        CSS but was still painted here, so saved cards grew an outline the
@@ -4188,17 +4158,37 @@ input[type=range]::-moz-range-thumb{
     const ow = (t.out && t.out.on) ? t.out.w : 0;
     const oc = t.out ? t.out.c : "#000000";
     const pre = t.out && t.out.preset;
-    const ring = pre && pre.ring ? pre.ring : null;
     const sh = pre && pre.sh ? pre.sh : null;
+    /* the Black shadow knob and the preset's own drop stack, in the order
+       the CSS lists them — text-shadow paints the first entry nearest the
+       glyphs, so canvas runs the list backwards to land the same way */
+    const shList = [];
+    if (t.shD > 0) {
+      /* the same compounding the CSS does: one pass reads grey once the
+         blur spreads it, so a strong setting lays the shape down again */
+      const a = t.shA / 100;
+      const reps = t.shA <= 45 ? 1 : t.shA <= 75 ? 2 : 3;
+      for (let i = 0; i < reps; i++)
+        shList.push({ x: 0, y: t.shD, blur: t.shD * .6 + .8,
+                      c: "rgba(0,0,0," + a.toFixed(2) + ")" });
+    }
+    if (sh) shList.push(sh);
+    /* the preset's letter colour stands in for the skin's own, exactly as
+       the CSS rule does — a highlighted run still overrides it per run */
+    const baseFill = (t.out && t.out.fill) || sp.text.color;
     /* a preset's text-shadow replaces the skin's own glow outright, the way
        the !important rule does in the CSS */
-    if (sp.textGlow && !sh && !ring) shadow(c, sp.textGlow[0], sp.textGlow[1], 0, 0);
+    if (sp.textGlow && !shList.length) shadow(c, sp.textGlow[0], sp.textGlow[1], 0, 0);
 
-    /* canvas centres a stroke on the outline; CSS throws it outward, so
-       every width doubles to land on the same silhouette */
+    /* CSS centres -webkit-text-stroke on the glyph outline and paint-order
+       repaints the fill over the inner half, so only half a width shows
+       outside. canvas centres its stroke the same way and the fill pass
+       below covers the inner half too — matching widths, not doubled ones,
+       land on the same silhouette. doubling made every PNG twice as heavy
+       as the preview */
     const strokeRun = (txt, px, py, width, col) => {
       c.lineJoin = "round"; c.miterLimit = 2;
-      c.lineWidth = width * 2;
+      c.lineWidth = width;
       c.strokeStyle = col;
       c.strokeText(txt, px, py);
     };
@@ -4208,22 +4198,17 @@ input[type=range]::-moz-range-thumb{
       const flat = segs.map(s => s.t).join("");
       if (sp.textPre) sp.textPre(c, flat, x, y, t);
 
-      /* the shadow goes down once, under the widest shape the line has —
+      /* each shadow goes down once, under the widest shape the line has —
          later passes cover it, so it never doubles up on a seam */
-      if (sh) {
+      for (let i = shList.length - 1; i >= 0; i--) {
+        const l = shList[i];
         c.save();
-        shadow(c, sh.c, sh.blur, sh.x, sh.y);
-        if (ring) strokeRun(flat, x, y, ow + ring.w, ring.c);
-        else if (ow > 0) strokeRun(flat, x, y, ow, oc);
-        else { c.fillStyle = sp.text.color; c.fillText(flat, x, y); }
+        shadow(c, l.c, l.blur, l.x, l.y);
+        if (ow > 0) strokeRun(flat, x, y, ow, oc);
+        else { c.fillStyle = baseFill; c.fillText(flat, x, y); }
         c.restore();
       }
 
-      if (ring) {
-        c.save(); clearShadow(c);
-        strokeRun(flat, x, y, ow + ring.w, ring.c);
-        c.restore();
-      }
       if (ow > 0) {
         c.save(); clearShadow(c);
         strokeRun(flat, x, y, ow, oc);
@@ -4232,7 +4217,7 @@ input[type=range]::-moz-range-thumb{
 
       let cx = x;
       for (const seg of segs) {
-        c.fillStyle = runFill(c, seg.r || {}, cx, y, seg.w, t.size, sp.text.color);
+        c.fillStyle = runFill(c, seg.r || {}, cx, y, seg.w, t.size, baseFill);
         c.fillText(seg.t, cx, y);
         cx += seg.w;
       }
@@ -4824,13 +4809,16 @@ input[type=range]::-moz-range-thumb{
       outC:    root.dataset.outline === "1"
                  ? (cs.getPropertyValue("--tx-out-c").trim() || "#000000")
                  : (cs.getPropertyValue("--tx-pre-c").trim() || "#000000"),
+      /* a preset's letter colour, so the PNG paints white type under the
+         black border instead of the skin's own ink */
+      fill:    root.dataset.presetFill === "1"
+                 ? (cs.getPropertyValue("--tx-fill").trim() || null) : null,
       /* the preset table lives with the controls; read it, never copy it */
       preset:  (window.RS && window.RS.TEXT_PRESETS &&
                 window.RS.TEXT_PRESETS[root.dataset.preset || "none"]) || null,
-      plateA:    num("--tx-plate-a", 0),
-      plateBlur: num("--tx-plate-blur", 14),
-      platePad:  num("--tx-plate-pad", 10),
-      plateCol:  (cs.getPropertyValue("--tx-plate-col").trim() || "#0B0A0A")
+      /* the Black shadow knob: px of drop, and how dark it lands */
+      shD:     num("--tx-sh-d", 0),
+      shA:     num("--tx-sh-a", 80)
     };
   }
 
@@ -5022,8 +5010,8 @@ input[type=range]::-moz-range-thumb{
     drawHead(c, m, sp, user);
     drawBody(c, m, sp, lines, {
       font: font, ls: ls, lh: lh, size: size, strokeMul: k.stroke,
-      out: { on: k.outline, w: k.outW, c: k.outC, preset: k.preset },
-      plate: { a: k.plateA, blur: k.plateBlur, pad: k.platePad, col: k.plateCol }
+      out: { on: k.outline, w: k.outW, c: k.outC, preset: k.preset, fill: k.fill },
+      shD: k.shD, shA: k.shA
     });
     c.restore();
 
